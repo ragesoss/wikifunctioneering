@@ -109,7 +109,7 @@ def encode_input(value):
     if isinstance(value, str):
         return value  # Wikifunctions accepts bare strings as Z6
     if isinstance(value, int):
-        sign = 'Z16660' if value >= 0 else 'Z16661'
+        sign = 'Z16660' if value > 0 else ('Z16662' if value < 0 else 'Z16661')
         return {
             'Z1K1': 'Z16683',
             'Z16683K1': {'Z1K1': 'Z16659', 'Z16659K1': sign},

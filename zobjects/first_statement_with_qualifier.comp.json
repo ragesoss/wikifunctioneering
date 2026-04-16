@@ -1,0 +1,32 @@
+{
+  "function_zid": "Z33588",
+  "label": "filter and select by qualifier",
+  "summary": "Add composition: select first statement that has the specified qualifier",
+  "expect_args": ["item", "property", "qualifier"],
+  "composition": {
+    "call": "Z811", "name": "first element",
+    "args": {
+      "Z811K1": {
+        "label": "list",
+        "call": "Z28513", "name": "filter statements by qualifiers",
+        "args": {
+          "Z28513K1": {
+            "label": "list including Wikidata statements",
+            "call": "Z29691", "name": "get statements for Wikidata property from item",
+            "args": {
+              "Z29691K1": {"label": "item", "ref": "item"},
+              "Z29691K2": {"label": "property", "ref": "property"}
+            }
+          },
+          "Z28513K2": {
+            "label": "property types to retain (all if left empty)",
+            "call": "Z14046", "name": "element to list",
+            "args": {
+              "Z14046K1": {"label": "element", "ref": "qualifier"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

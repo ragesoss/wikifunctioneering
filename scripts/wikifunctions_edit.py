@@ -21,8 +21,7 @@ Usage:
     echo '...' | python scripts/wikifunctions_edit.py create --summary "New helper function"
 
 Credentials are read from .env in the project root:
-    WF_BOT_USERNAME=User@BotName
-    WF_BOT_PASSWORD=password
+    WF_OAUTH_TOKEN=your-owner-only-access-token
 
 Edit summaries automatically include AI disclosure per Wikifunctions
 community norms (see docs/ai-disclosure.md).
@@ -35,7 +34,6 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-import http.cookiejar
 
 from config import WF_API, USER_AGENT
 
@@ -55,38 +53,35 @@ def load_env():
                     key, value = line.split("=", 1)
                     env[key.strip()] = value.strip()
     except FileNotFoundError:
-        print("Error: .env file not found. Create it with WF_BOT_USERNAME and WF_BOT_PASSWORD.", file=sys.stderr)
+        print("Error: .env file not found. Create it with WF_OAUTH_TOKEN.", file=sys.stderr)
         sys.exit(1)
     return env
 
 
 class WikifunctionsSession:
-    """Authenticated session for Wikifunctions API edits."""
+    """Authenticated session for Wikifunctions API edits using OAuth 2.0."""
 
-    def __init__(self, username, password):
-        self.username = username
-        self.password = password
-        self.cookie_jar = http.cookiejar.CookieJar()
-        self.opener = urllib.request.build_opener(
-            urllib.request.HTTPCookieProcessor(self.cookie_jar)
-        )
+    def __init__(self, access_token):
+        self.access_token = access_token
         self.csrf_token = None
 
     def _request(self, params, post_data=None):
-        """Make an API request. GET if no post_data, POST otherwise."""
+        """Make an API request with OAuth 2.0 Bearer token."""
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Authorization": f"Bearer {self.access_token}",
+        }
         if post_data is not None:
             url = WF_API
             data = urllib.parse.urlencode({**params, **post_data}).encode()
-            req = urllib.request.Request(url, data=data, headers={
-                "User-Agent": USER_AGENT,
-                "Content-Type": "application/x-www-form-urlencoded",
-            })
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            req = urllib.request.Request(url, data=data, headers=headers)
         else:
             url = f"{WF_API}?{urllib.parse.urlencode(params)}"
-            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            req = urllib.request.Request(url, headers=headers)
 
         try:
-            with self.opener.open(req) as resp:
+            with urllib.request.urlopen(req) as resp:
                 return json.loads(resp.read().decode())
         except urllib.error.HTTPError as e:
             body = e.read().decode()
@@ -95,33 +90,6 @@ class WikifunctionsSession:
             except json.JSONDecodeError:
                 print(f"HTTP {e.code}: {body[:500]}", file=sys.stderr)
                 sys.exit(1)
-
-    def login(self):
-        """Log in with bot password (two-step: get token, then login)."""
-        # Step 1: get login token
-        result = self._request({
-            "action": "query",
-            "meta": "tokens",
-            "type": "login",
-            "format": "json",
-        })
-        login_token = result["query"]["tokens"]["logintoken"]
-
-        # Step 2: login
-        result = self._request(
-            {"action": "login", "format": "json"},
-            {
-                "lgname": self.username,
-                "lgpassword": self.password,
-                "lgtoken": login_token,
-            },
-        )
-        login_result = result.get("login", {})
-        if login_result.get("result") != "Success":
-            reason = login_result.get("reason", login_result.get("result", "unknown"))
-            print(f"Login failed: {reason}", file=sys.stderr)
-            sys.exit(1)
-        print(f"Logged in as {login_result.get('lgusername', self.username)}", file=sys.stderr)
 
     def get_csrf_token(self):
         """Fetch a CSRF token for editing."""
@@ -133,7 +101,7 @@ class WikifunctionsSession:
         })
         self.csrf_token = result["query"]["tokens"]["csrftoken"]
         if self.csrf_token == "+\\":
-            print("Error: got anonymous CSRF token — login may have failed.", file=sys.stderr)
+            print("Error: got anonymous CSRF token — OAuth token may be invalid.", file=sys.stderr)
             sys.exit(1)
 
     def create(self, zobject_json, summary=""):
@@ -266,14 +234,12 @@ def main():
 
     # Authenticate and execute
     env = load_env()
-    username = env.get("WF_BOT_USERNAME")
-    password = env.get("WF_BOT_PASSWORD")
-    if not username or not password:
-        print("Error: WF_BOT_USERNAME and WF_BOT_PASSWORD must be set in .env", file=sys.stderr)
+    token = env.get("WF_OAUTH_TOKEN")
+    if not token:
+        print("Error: WF_OAUTH_TOKEN must be set in .env", file=sys.stderr)
         sys.exit(1)
 
-    session = WikifunctionsSession(username, password)
-    session.login()
+    session = WikifunctionsSession(token)
 
     if args.command == "create":
         result = session.create(zobject_json, summary)

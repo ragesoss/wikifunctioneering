@@ -1,5 +1,6 @@
 docs/exemplar-items.md
 .env
 .claude/
+.browser-profile/
 __pycache__/
 *.pyc

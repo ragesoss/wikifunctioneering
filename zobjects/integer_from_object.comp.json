@@ -1,0 +1,24 @@
+{
+  "function_zid": "Z33592",
+  "label": "composition via string and natural number",
+  "summary": "Add composition: Z1 -> string -> natural number -> integer",
+  "expect_args": ["object"],
+  "composition": {
+    "call": "Z17101", "name": "natural number to integer",
+    "args": {
+      "Z17101K1": {
+        "label": "number",
+        "call": "Z14283", "name": "string of digits as Natural Number",
+        "args": {
+          "Z14283K1": {
+            "label": "string to parse",
+            "call": "Z31120", "name": "string from object",
+            "args": {
+              "Z31120K1": {"label": "object", "ref": "object"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

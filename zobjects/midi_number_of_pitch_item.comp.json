@@ -1,0 +1,28 @@
+{
+  "implementation_zid": "Z33591",
+  "function_zid": "Z33590",
+  "label": "composition via qualifier extraction",
+  "summary": "Revised composition: use Z33592 (integer from object) helper",
+  "expect_args": ["note"],
+  "composition": {
+    "call": "Z33592", "name": "integer from object",
+    "args": {
+      "Z33592K1": {
+        "label": "object",
+        "call": "Z33579", "name": "qualifier value of Wikidata statement",
+        "args": {
+          "Z33579K1": {
+            "label": "Wikidata statement",
+            "call": "Z33588", "name": "first statement with qualifier",
+            "args": {
+              "Z33588K1": {"label": "item", "ref": "note"},
+              "Z33588K2": {"label": "property", "literal": "P361", "type": "Z6092"},
+              "Z33588K3": {"label": "qualifier", "literal": "P1545", "type": "Z6092"}
+            }
+          },
+          "Z33579K2": {"label": "qualifier predicate", "literal": "P1545", "type": "Z6092"}
+        }
+      }
+    }
+  }
+}

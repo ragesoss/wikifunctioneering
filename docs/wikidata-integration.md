@@ -64,6 +64,25 @@ python scripts/wikidata_explore.py --sparql "SELECT ?item ?itemLabel WHERE {
 } LIMIT 20"
 ```
 
+## When to use references vs full entities in function signatures
+
+Each Wikidata entity type has a lightweight **reference** (just the ID string) and a full **fetched entity** (all labels, statements, qualifiers, etc.):
+
+| Entity | Reference type | Full type | Fetch function |
+|--------|---------------|-----------|----------------|
+| Item | Z6091 (QID) | Z6001 | Z6821 |
+| Property | Z6092 (PID) | Z6004 | Z6822 |
+| Lexeme | Z6093 (LID) | Z6005 | Z6825 |
+
+**Rule of thumb:** use the full type when a function needs to *read the entity's data* (its statements, labels, qualifiers). Use the reference when a function only needs to *identify* or *match* the entity.
+
+In practice:
+- **Items as inputs** are usually Z6001, because most functions need to read the item's statements.
+- **Items as outputs** are usually Z6091, because the function is identifying/selecting an item and the caller decides whether to fetch.
+- **Properties** are almost always Z6092 (references), because they're used as filter keys — matching against statement predicates — not as data sources. You'd only need Z6004 to read a property's own metadata (its label, constraints, etc.).
+
+This keeps functions composable: a function that returns Z6091 can feed into Z6821 (fetch), Z19316 (compare references), Z23753 (get label), or Z20041 (get QID string) — the caller picks the next step. A function that returns Z6001 has already committed to the fetch, which may be unnecessary if the caller only needs the QID.
+
 ## Patterns for Wikidata-aware functions
 
 ### Pattern 1: Direct property lookup

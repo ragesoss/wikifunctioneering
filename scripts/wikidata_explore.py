@@ -13,11 +13,7 @@ import sys
 import urllib.parse
 import urllib.request
 
-WIKIDATA_API = "https://www.wikidata.org/w/api.php"
-WIKIDATA_REST = "https://www.wikidata.org/w/rest.php/wikibase/v1"
-SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
-
-USER_AGENT = "WikifunctionsExplorer/0.1 (sage@wikiedu.org)"
+from config import WIKIDATA_API, SPARQL_ENDPOINT, USER_AGENT
 
 
 def api_get(url, params=None):

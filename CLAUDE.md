@@ -47,6 +47,14 @@ When the user describes a function they want to create:
   echo '{"Z1K1": "Z7", ...}' | python scripts/zobject_validate.py
   ```
 
+**Wikidata cache warning:** Wikifunctions caches fetched Wikidata entities in memcached. There is NO automatic cache invalidation when Wikidata items are edited. If the user edits a Wikidata item (adding claims, qualifiers, etc.) during a session, those changes may not be visible to Wikifunctions for hours. There is no user-facing cache purge mechanism — the `wikilambda-bypass-cache` right is staff-only.
+
+When this happens:
+- Functions and tests that depend on the edited data will fail with stale results
+- `wikidata_explore.py` (which hits the Wikidata API directly) will show the correct data, making the discrepancy confusing
+- Test against items that were NOT previously cached by Wikifunctions, or wait for the cache to expire
+- Note the cache issue in session docs so the next session knows which tests may be affected
+
 ### 5. Resolve argument labels
 Before presenting, fetch every function that appears in the composition tree to confirm its argument labels, input types, and output types. The user builds compositions in the Wikifunctions UI where these labels are prominent — generic labels like "first argument" are not acceptable.
 
@@ -72,13 +80,23 @@ Z21032: multiply (float64)
 
 Use ZObjects when they add value — for validation, debugging, comparing expected vs. actual behavior — but always frame them in context. The primary deliverable is a clear description the user can understand and act on.
 
+### 7. Generate UI build instructions
+When the user is ready to build a composition in the Wikifunctions UI, use the composition guide script to generate step-by-step instructions:
+```bash
+echo '{"call": "Z28297", "args": {"Z28297K1": {"call": "Z811", ...}}}' | python scripts/composition_guide.py
+```
+
+The script takes a JSON composition tree (using `"call"`, `"ref"`, and `"literal"` nodes) and outputs numbered instructions matching the top-down workflow of the composition editor. Always use this when walking the user through building a composition — it fetches argument labels automatically and produces consistent, unambiguous instructions.
+
 ## Reference materials
 
 Read these docs for detailed knowledge:
 - `docs/wikifunctions-primer.md` — ZObject model, types, composition patterns
-- `docs/wikidata-integration.md` — How functions access and traverse Wikidata
-- `docs/existing-building-blocks.md` — Catalog of key reusable functions
+- `docs/wikidata-integration.md` — How functions access and traverse Wikidata (includes reference vs. full entity guidance)
+- `docs/existing-building-blocks.md` — Catalog of key reusable functions (including type casting from Z1 and qualifier extraction)
 - `docs/worked-examples.md` — Real decomposition walkthrough (pitch frequency function)
+- `docs/future-helpers.md` — Helper functions identified but not yet created
+- `docs/session-notes/` — Notes from past sessions, including what worked and what didn't
 
 ## Key concepts to remember
 

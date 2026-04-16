@@ -1,0 +1,5 @@
+docs/exemplar-items.md
+.env
+.claude/
+__pycache__/
+*.pyc

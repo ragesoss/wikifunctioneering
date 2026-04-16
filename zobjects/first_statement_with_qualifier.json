@@ -1,0 +1,68 @@
+{
+  "Z1K1": "Z2",
+  "Z2K1": { "Z1K1": "Z6", "Z6K1": "Z0" },
+  "Z2K2": {
+    "Z1K1": "Z8",
+    "Z8K1": [
+      "Z17",
+      {
+        "Z1K1": "Z17",
+        "Z17K1": "Z6001",
+        "Z17K2": "Z0K1",
+        "Z17K3": {
+          "Z1K1": "Z12",
+          "Z12K1": [
+            "Z11",
+            { "Z1K1": "Z11", "Z11K1": "Z1002", "Z11K2": "item" }
+          ]
+        }
+      },
+      {
+        "Z1K1": "Z17",
+        "Z17K1": "Z6092",
+        "Z17K2": "Z0K2",
+        "Z17K3": {
+          "Z1K1": "Z12",
+          "Z12K1": [
+            "Z11",
+            { "Z1K1": "Z11", "Z11K1": "Z1002", "Z11K2": "property" }
+          ]
+        }
+      },
+      {
+        "Z1K1": "Z17",
+        "Z17K1": "Z6092",
+        "Z17K2": "Z0K3",
+        "Z17K3": {
+          "Z1K1": "Z12",
+          "Z12K1": [
+            "Z11",
+            { "Z1K1": "Z11", "Z11K1": "Z1002", "Z11K2": "qualifier" }
+          ]
+        }
+      }
+    ],
+    "Z8K2": "Z6003",
+    "Z8K3": [ "Z20" ],
+    "Z8K4": [ "Z14" ],
+    "Z8K5": "Z0"
+  },
+  "Z2K3": {
+    "Z1K1": "Z12",
+    "Z12K1": [
+      "Z11",
+      { "Z1K1": "Z11", "Z11K1": "Z1002", "Z11K2": "first statement with qualifier from item's property claims" }
+    ]
+  },
+  "Z2K4": {
+    "Z1K1": "Z32",
+    "Z32K1": [ "Z31" ]
+  },
+  "Z2K5": {
+    "Z1K1": "Z12",
+    "Z12K1": [
+      "Z11",
+      { "Z1K1": "Z11", "Z11K1": "Z1002", "Z11K2": "From an item's claims for a property, returns the first statement that has the specified qualifier." }
+    ]
+  }
+}

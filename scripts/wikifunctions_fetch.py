@@ -15,8 +15,7 @@ import sys
 import urllib.parse
 import urllib.request
 
-WF_API = "https://www.wikifunctions.org/w/api.php"
-USER_AGENT = "WikifunctionsExplorer/0.1 (sage@wikiedu.org)"
+from config import WF_API, USER_AGENT
 
 # Well-known ZIDs for readable output
 KNOWN_TYPES = {

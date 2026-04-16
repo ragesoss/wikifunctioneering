@@ -47,6 +47,14 @@ python scripts/wikifunctions_search.py --search "term" --type Z8
 | Z20854 | rational as float | rational: Rational → Float64 |
 | Z25294 | amount from quantity | quantity: Wikidata quantity (Z6010) → Rational |
 
+### Parsing (String → numeric)
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z14283 | string of digits as Natural Number | String → Natural number | Western Arabic digits only |
+| Z16705 | read Integer | String, Language → Integer | Locale-aware integer parsing |
+| Z17101 | integer from natural number | Natural number → Integer | Always positive |
+
 ### Common type conversion chains
 
 | From | To | Chain |
@@ -109,14 +117,26 @@ python scripts/wikifunctions_search.py --search "term" --type Z8
 |-----|------|-----------|
 | Z22220 | claims from Wikidata item | Wikidata Item → List of Claims |
 | Z28294 | predicate of claim | Claim → Property Reference |
-| Z28297 | value of claim | Claim → (value type) |
+| Z28297 | value of claim | Claim → (value type, Z1) |
 | Z28300 | claim type | Claim → Claim Subtype |
 | Z28304 | claim has value? | Claim → Boolean |
 | Z28308 | claim predicate matches? | Claim, Property Ref → Boolean |
 | Z32097 | filter claims by exact predicate | List of Claims, Property Ref → List of Claims |
 | Z28312 | qualifiers with predicate | Statement, Property Ref → List of Claims |
+| Z28321 | qualifier values with predicate | Statement, Property Ref → Z1 (list of qualifier values) |
 | Z23680 | claim with highest rank | List of Claims → Claim |
-| Z21449 | value of first property claim from item | Item, Property Ref → value |
+| Z21449 | value of first property claim from item | Item, Property Ref → value (Z1) |
+
+### Statement-level access (shortcuts for common claim patterns)
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z23451 | statement with highest rank | Item, Property Ref → Statement (Z6003) | Returns the statement itself (not the value) — use when you need access to qualifiers |
+| Z23459 | statement value with highest rank | Item, Property Ref → value (Z1) | Returns the main value only |
+| Z19308 | value of statement | Statement (Z6003) → Z1 | Extracts Z6003K3 |
+| Z28513 | filter statements by qualifiers | List of Z1, List of Property Refs → List of Statements | Keeps only statements that have qualifiers with specified properties; empty property list = keep all with any qualifier |
+| Z33103 | statement value is reference to item? | Statement (Z6003), Item Ref (Z6091) → Boolean | Checks if a statement's main value matches a given item reference. Key for filtering claims by value with Z28316. |
+| Z29691 | get statements for property from item | Item, Property Ref → List of Statements | Returns all statements for a property (not just highest rank) |
 
 ## Wikidata — Items
 
@@ -127,6 +147,23 @@ python scripts/wikifunctions_search.py --search "term" --type Z8
 | Z20041 | item reference to QID string | Item Ref → String |
 | Z23753 | item reference to label | Item Ref, Language → String |
 | Z27299 | item has claim? | Item, Property Ref → Boolean |
+
+## Type casting from Z1 (Object)
+
+When claim values and qualifier values come back as Z1 (generic), these functions cast them to specific types for use in typed compositions:
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z23742 | Object as Wikidata item reference | Z1 → Z6091 | Cast untyped item reference to typed |
+| Z23737 | Object as Wikidata item | Z1 → Z6001 | Cast untyped item to typed |
+| Z29335 | Wikidata item reference from object | Z1 → Z6091 | Extracts QID from various object shapes |
+| Z31120 | string from object | Z1 → String | Extract or derive a string from any object |
+
+## Wikidata — Qualifier Extraction (user-created)
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z33573 | qualifier value of item property claim | Item, Property Ref, Property Ref → Z1 | Gets qualifier value from an item's highest-ranked claim for a property |
 
 ## Music Theory (user-created)
 
@@ -143,3 +180,4 @@ python scripts/wikifunctions_search.py --search "term" --type Z8
 | Z25407 | transpose pitch | ? |
 | Z25408 | pitch by distance from C in semitones | ? |
 | Z33288 | Wikidata pitch item for MIDI note number | ? |
+| Z33570 | reference note of pitch standard | pitch standard: Z6001 → Z6091 (Item Reference) |

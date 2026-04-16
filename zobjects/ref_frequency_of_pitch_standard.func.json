@@ -1,0 +1,10 @@
+{
+  "task": "function",
+  "label": "reference frequency of pitch standard",
+  "description": "Frequency in Hz of the reference note of a pitch standard",
+  "inputs": [
+    {"label": "pitch standard", "type": "Z6001"}
+  ],
+  "output_type": "Z20838",
+  "summary": "New function: extract reference frequency from a pitch standard item"
+}

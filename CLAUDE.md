@@ -4,7 +4,7 @@ You are helping design functions for Wikifunctions (wikifunctions.org) — a col
 
 ## Your workflow
 
-When the user describes a function they want to create:
+When the user describes a function they want to create, follow this workflow. The key principle is **prototype via API first, create on-wiki last** — running compositions directly via the API is fast and free, so validate the design completely before touching Wikifunctions.
 
 ### 1. Understand the domain
 - Ask clarifying questions about what the function should do
@@ -80,23 +80,100 @@ Z21032: multiply (float64)
 
 Use ZObjects when they add value — for validation, debugging, comparing expected vs. actual behavior — but always frame them in context. The primary deliverable is a clear description the user can understand and act on.
 
-### 7. Generate UI build instructions
-When the user is ready to build a composition in the Wikifunctions UI, use the composition guide script to generate step-by-step instructions:
+### 7. Prototype and validate via API
+Before creating anything on Wikifunctions, run the composition directly:
 ```bash
-echo '{"call": "Z28297", "args": {"Z28297K1": {"call": "Z811", ...}}}' | python scripts/composition_guide.py
+# Run the full composition with test inputs:
+python scripts/composition_run.py zobjects/my.comp.json \
+  --inputs '{"pitch class": "A", "octave": 4, "pitch standard": {"fetch": "Q17087764"}}'
+
+# If it fails, debug to find which sub-tree is the root cause:
+python scripts/composition_debug.py zobjects/my.comp.json \
+  --inputs '{"pitch class": "A", "octave": 4, "pitch standard": {"fetch": "Q17087764"}}'
+
+# Preview the generated API call without executing:
+python scripts/composition_run.py zobjects/my.comp.json --inputs '...' --dry-run
 ```
 
-The script takes a JSON composition tree (using `"call"`, `"ref"`, and `"literal"` nodes) and outputs numbered instructions matching the top-down workflow of the composition editor. Always use this when walking the user through building a composition — it fetches argument labels automatically and produces consistent, unambiguous instructions.
+Input values: strings (`"C"`), integers (`4`), Wikidata items (`{"fetch": "Q12345"}`), typed references (`{"ref": "Z6092", "value": "P361"}`).
+
+Iterate on the composition tree until all test cases produce correct results. Only then proceed to creating on-wiki.
+
+### 8. Build via browser automation
+When the composition is validated, use the browser automation toolkit to build it:
+```bash
+ruby scripts/wf.rb zobjects/my_function.func.json    # create function shell
+ruby scripts/wf.rb zobjects/my_function.comp.json    # add composition implementation
+```
+
+The toolkit (`scripts/wf.rb`) dispatches to task-specific handlers:
+- `scripts/wf_browser.rb` — browser primitives (launch, login, DOM interaction)
+- `scripts/wf_task_composition.rb` — create/edit compositions
+- `scripts/wf_task_function.rb` — create function shells
+
+**JSON spec format** for compositions:
+```json
+{
+  "function_zid": "Z33605",
+  "label": "composition via MIDI distance",
+  "summary": "Add composition: ref_freq * 2^((input_midi - ref_midi) / 12)",
+  "expect_args": ["pitch class", "octave", "pitch standard"],
+  "composition": {
+    "call": "Z21032", "name": "multiply (float64)",
+    "args": {
+      "Z21032K1": {
+        "label": "multiplicand",
+        "call": "Z33603", "name": "reference frequency",
+        "args": { "Z33603K1": {"label": "pitch standard", "ref": "pitch standard"} }
+      }
+    }
+  }
+}
+```
+
+Node types: `{"call": "Z#", "args": {...}}`, `{"ref": "arg_name"}`, `{"literal": "P361", "type": "Z6092"}`.
+The `"name"` and `"label"` fields are optional human-readable annotations.
+
+Use `"implementation_zid"` to edit an existing implementation instead of creating a new one.
+
+**Function shell spec format:**
+```json
+{
+  "task": "function",
+  "label": "MIDI number of pitch",
+  "description": "Computes MIDI note number from pitch class and octave",
+  "inputs": [{"label": "pitch class", "type": "Z6"}, {"label": "octave", "type": "Z16683"}],
+  "output_type": "Z16683",
+  "summary": "New function"
+}
+```
+
+**Browser automation notes:**
+- Uses a persistent Chrome profile (`.browser-profile/`) so login survives between runs
+- Codex Vue components don't expose `data-value` DOM attributes — use keyboard navigation (ArrowDown + Enter) for all lookups and selects
+- Type ZIDs, not function names, into lookup fields
+- The UI may pre-select functions based on type compatibility — the script detects this and skips redundant selections
+- Function labels must be under ~50 characters
+- After successful publish, the script verifies via API and exits cleanly
+- To inspect DOM for new page types, write a diagnostic script (see `scripts/inspect_create_function.rb` pattern)
+
+### 9. Composition design principles
+When designing compositions with many levels:
+- **Extract type conversion chains** into helpers (e.g., Z33592 "integer from object" encapsulates Z1 → String → Natural → Integer)
+- **Keep compositions under ~5 levels** — deeper than that is hard to build in the UI and hard to read
+- **Every level should do meaningful domain work** — if 3 of 5 levels are type conversions, extract a helper
+- **Use Z31090 (float64 within tolerance)** as the test validator for functions returning Float64
 
 ## Reference materials
 
 Read these docs for detailed knowledge:
 - `docs/wikifunctions-primer.md` — ZObject model, types, composition patterns
 - `docs/wikidata-integration.md` — How functions access and traverse Wikidata (includes reference vs. full entity guidance)
-- `docs/existing-building-blocks.md` — Catalog of key reusable functions (including type casting from Z1 and qualifier extraction)
+- `docs/existing-building-blocks.md` — Catalog of key reusable functions (including type casting, qualifier extraction, and pitch standard pipeline)
 - `docs/worked-examples.md` — Real decomposition walkthrough (pitch frequency function)
 - `docs/future-helpers.md` — Helper functions identified but not yet created
 - `docs/session-notes/` — Notes from past sessions, including what worked and what didn't
+- `zobjects/` — JSON specs for functions and compositions (`.func.json` for function shells, `.comp.json` for compositions)
 
 ## Key concepts to remember
 

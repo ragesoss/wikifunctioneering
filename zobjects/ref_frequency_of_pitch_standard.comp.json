@@ -1,0 +1,24 @@
+{
+  "function_zid": "Z33603",
+  "label": "composition via quantity extraction",
+  "summary": "Add composition: extract frequency quantity and convert to float",
+  "expect_args": ["pitch standard"],
+  "composition": {
+    "call": "Z20854", "name": "Rational number as float",
+    "args": {
+      "Z20854K1": {
+        "label": "rational",
+        "call": "Z25294", "name": "amount from quantity",
+        "args": {
+          "Z25294K1": {
+            "label": "quantity",
+            "call": "Z25218", "name": "A4 frequency of pitch standard",
+            "args": {
+              "Z25218K1": {"label": "Pitch standard", "ref": "pitch standard"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

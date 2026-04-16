@@ -1,0 +1,10 @@
+{
+  "task": "function",
+  "label": "MIDI number of pitch",
+  "inputs": [
+    {"label": "pitch class", "type": "Z6"},
+    {"label": "octave", "type": "Z16683"}
+  ],
+  "output_type": "Z16683",
+  "summary": "New function: compute MIDI note number from pitch class and octave"
+}

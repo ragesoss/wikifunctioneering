@@ -164,6 +164,14 @@ When claim values and qualifier values come back as Z1 (generic), these function
 | ZID | Name | Signature | Notes |
 |-----|------|-----------|-------|
 | Z33573 | qualifier value of item property claim | Item, Property Ref, Property Ref → Z1 | Gets qualifier value from an item's highest-ranked claim for a property |
+| Z33579 | qualifier value of Wikidata statement | Statement (Z6003), Property Ref → Z1 | Extracts a qualifier value from a single statement |
+| Z33588 | first statement with qualifier | Item, Property Ref, Property Ref → Statement (Z6003) | Selects first statement that has the specified qualifier |
+
+## Type Conversion Helpers (user-created)
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z33592 | integer from object | Z1 → Integer | Chain: Z31120 → Z14283 → Z17101. Use when extracting numeric values from Wikidata claims. |
 
 ## Music Theory (user-created)
 
@@ -181,3 +189,8 @@ When claim values and qualifier values come back as Z1 (generic), these function
 | Z25408 | pitch by distance from C in semitones | ? |
 | Z33288 | Wikidata pitch item for MIDI note number | ? |
 | Z33570 | reference note of pitch standard | pitch standard: Z6001 → Z6091 (Item Reference) |
+| Z33590 | MIDI number of pitch item | note: Z6001 → Integer | Extracts MIDI number from a Wikidata pitch item via P361/P1545 |
+| Z33600 | MIDI number of pitch | pitch class: String, octave: Integer → Integer | Computes (octave+1)*12 + distance_from_C |
+| Z33603 | reference frequency of pitch standard | pitch standard: Z6001 → Float64 | Extracts reference frequency in Hz via Z25218 → Z25294 → Z20854 |
+| Z33605 | frequency of pitch in 12-TET standard | pitch class: String, octave: Integer, pitch standard: Z6001 → Float64 | Top-level: ref_freq × 2^((input_midi − ref_midi) / 12) |
+| Z33606 | MIDI number of reference note | pitch standard: Z6001 → Integer | Helper: MIDI of a pitch standard's reference note |

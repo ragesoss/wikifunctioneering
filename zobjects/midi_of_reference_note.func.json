@@ -1,0 +1,10 @@
+{
+  "task": "function",
+  "label": "MIDI number of reference note",
+  "description": "MIDI note number of the reference note of a pitch standard",
+  "inputs": [
+    {"label": "pitch standard", "type": "Z6001"}
+  ],
+  "output_type": "Z16683",
+  "summary": "New helper: MIDI number of a pitch standard's reference note"
+}

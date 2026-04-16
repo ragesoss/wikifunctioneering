@@ -1,0 +1,12 @@
+{
+  "task": "function",
+  "label": "frequency of pitch in 12-TET standard",
+  "description": "Frequency in Hz of a pitch in a 12-tone equal temperament pitch standard",
+  "inputs": [
+    {"label": "pitch class", "type": "Z6"},
+    {"label": "octave", "type": "Z16683"},
+    {"label": "pitch standard", "type": "Z6001"}
+  ],
+  "output_type": "Z20838",
+  "summary": "New function: compute pitch frequency from pitch class, octave, and pitch standard"
+}

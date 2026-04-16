@@ -664,8 +664,8 @@ class WikifunctionsBrowser
       short_pause
       input.send_keys(:return)
 
-    when 'Z6' # String
-      input = el.find_element(css: '[data-testid="text-input"], input.cdx-text-input__input')
+    when 'Z6', 'Z16683', 'Z13518' # String, Integer, Natural Number
+      input = el.find_element(css: '[data-testid="text-input"], input.cdx-text-input__input, input[type="number"], input')
       input.clear
       input.send_keys(value)
 

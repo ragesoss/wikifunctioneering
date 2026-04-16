@@ -1,0 +1,33 @@
+{
+  "function_zid": "Z33600",
+  "label": "composition via integer math",
+  "summary": "Add composition: (octave + 1) * 12 + distance_from_C(pitch_class)",
+  "expect_args": ["pitch class", "octave"],
+  "composition": {
+    "call": "Z16693", "name": "add Integers",
+    "args": {
+      "Z16693K1": {
+        "label": "first integer to add",
+        "call": "Z17120", "name": "multiply Integers",
+        "args": {
+          "Z17120K1": {"label": "first int", "literal": "12", "type": "Z16683"},
+          "Z17120K2": {
+            "label": "second int",
+            "call": "Z16693", "name": "add Integers",
+            "args": {
+              "Z16693K1": {"label": "first integer to add", "ref": "octave"},
+              "Z16693K2": {"label": "second integer to add", "literal": "1", "type": "Z16683"}
+            }
+          }
+        }
+      },
+      "Z16693K2": {
+        "label": "second integer to add",
+        "call": "Z25220", "name": "distance from C in semitones",
+        "args": {
+          "Z25220K1": {"label": "pitch", "ref": "pitch class"}
+        }
+      }
+    }
+  }
+}

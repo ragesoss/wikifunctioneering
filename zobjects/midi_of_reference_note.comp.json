@@ -1,0 +1,24 @@
+{
+  "function_zid": "Z33606",
+  "label": "composition via item fetch and MIDI lookup",
+  "summary": "Add composition: fetch reference note item, extract MIDI number",
+  "expect_args": ["pitch standard"],
+  "composition": {
+    "call": "Z33590", "name": "MIDI number of pitch item",
+    "args": {
+      "Z33590K1": {
+        "label": "note",
+        "call": "Z6821", "name": "Fetch Wikidata item",
+        "args": {
+          "Z6821K1": {
+            "label": "Wikidata item reference",
+            "call": "Z33570", "name": "reference note of pitch standard",
+            "args": {
+              "Z33570K1": {"label": "pitch standard", "ref": "pitch standard"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

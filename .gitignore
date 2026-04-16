@@ -2,5 +2,6 @@ docs/exemplar-items.md
 .env
 .claude/
 .browser-profile/
+.ruby-lsp/
 __pycache__/
 *.pyc

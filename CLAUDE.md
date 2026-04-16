@@ -177,6 +177,15 @@ Read these docs for detailed knowledge:
 
 ## Key concepts to remember
 
+### Wikifunctions architecture
+Almost everything on Wikifunctions is an on-wiki ZObject — including type converters (Z46 deserializers, Z64 serializers), built-in function implementations, and the type definitions themselves. When something appears to be a "platform bug" (e.g., the runtime mishandling a type), check whether the relevant code is actually an editable ZObject before assuming it requires a platform-level fix. Use `wikifunctions_fetch.py --zid Z##### --implementations` to inspect any function's code.
+
+### Type encoding
+When constructing ZObjects for API calls, use the correct canonical values:
+- **Z16659 (Sign):** Z16660 = positive, Z16661 = neutral (zero), Z16662 = negative
+- **Z16683 (Integer):** needs full structure: `{Z1K1: Z16683, Z16683K1: {Z1K1: Z16659, Z16659K1: sign_zid}, Z16683K2: {Z1K1: Z13518, Z13518K1: "digits"}}`
+- **Note:** Some on-wiki type converters don't handle canonical (shorthand) form correctly. When in doubt, use the expanded normal form for ZObject fields.
+
 ### Composition pattern
 Functions are composed by nesting Z7 (function call) nodes. Arguments flow via Z18 (argument reference). The top-level composition calls functions, which call other functions, forming a tree.
 

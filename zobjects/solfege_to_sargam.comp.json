@@ -1,7 +1,8 @@
 {
   "function_zid": "Z26184",
+  "implementation_zid": "Z33678",
   "label": "solfege to sargam via Wikidata lexemes",
-  "summary": "Solfege syllable → scale degree item → svara item (via P460) → English sargam lexeme lemma (via Z33668)",
+  "summary": "Fix Z33668K2 language field (Z9 ref to Z1002) — was empty in the initial publish",
   "expect_args": ["solfege note"],
   "composition": {
     "call": "Z33668", "name": "word for concept",

@@ -20,8 +20,9 @@ require 'optparse'
 require_relative 'wf_browser'
 require_relative 'wf_task_composition'
 require_relative 'wf_task_function'
+require_relative 'wf_task_tester'
 
-options = { delay: 0.7, browser: :chrome }
+options = { delay: 0.25, browser: :chrome }
 
 OptionParser.new do |opts|
   opts.banner = "Usage: #{$PROGRAM_NAME} SPEC_FILE [options]"
@@ -47,7 +48,8 @@ spec = JSON.parse(File.read(file))
 # Determine which task to run
 task_name = spec['task']
 task_name ||= 'composition' if spec['composition']
-task_name ||= 'function' if spec['inputs']
+task_name ||= 'tester'      if spec['validator'] || spec['test_call']
+task_name ||= 'function'    if spec['inputs']
 
 unless task_name
   warn 'Cannot determine task from spec. Include "task", "composition", or "inputs".'
@@ -66,6 +68,8 @@ begin
            WfTaskComposition.new(wf, spec)
          when 'function'
            WfTaskFunction.new(wf, spec)
+         when 'tester'
+           WfTaskTester.new(wf, spec)
          else
            raise "Unknown task: #{task_name}"
          end

@@ -19,7 +19,7 @@ class WfBrowser
 
   attr_reader :driver, :function_zid, :api_info
 
-  def initialize(browser: :firefox, delay: 0.7)
+  def initialize(browser: :firefox, delay: 0.25)
     @browser = browser
     @delay = delay
     @driver = nil
@@ -568,7 +568,7 @@ class WfBrowser
       rescue StandardError
         next
       end
-      sleep 0.4
+      sleep 0.15
       if handle.attribute('aria-expanded') == 'true'
         log "    (select opened via strategy #{idx + 1})" if idx.positive?
         return true
@@ -580,10 +580,69 @@ class WfBrowser
 
   # ── UI primitives: literal values ────────────────────────────
 
-  def fill_literal(keypath, value, type)
+  def fill_literal(keypath, value, type, label: nil)
     el = @driver.find_element(id: keypath)
 
     case type
+    when 'Z9' # Reference to a persistent ZObject (e.g. Z1002 for English)
+      # The slot is a typed picker (e.g. a "Select language" Codex lookup
+      # for Z60). Typing the ZID alone often doesn't filter — the picker
+      # indexes by human name — so prefer the human-readable label when
+      # the spec provides one, and still match the dropdown by ZID in the
+      # item's text (dropdown items usually include "(Z####)").
+      input = el.find_elements(css: 'input.cdx-text-input__input, input[type="text"]')
+                .find { |i| i.displayed? rescue false }
+      raise "fill_literal (Z9): no visible input in #{keypath}" unless input
+
+      scroll_to(input)
+      short_pause
+      @driver.action.move_to(input).click.perform
+      short_pause
+      typed = (label && !label.empty?) ? label : value
+      @driver.action.send_keys(typed).perform
+      short_pause
+
+      # Match priority: ZID in text (most specific, e.g. "English (Z1002)")
+      # > exact-label first-line (e.g. "English"). Substring-label match is
+      # unsafe here: "Australian English (English)" contains "English" and
+      # would be wrongly preferred over plain "English" (Z1002).
+      matched = nil
+      begin
+        slow_wait(timeout: 6, tag: "literal-ref-#{value}") do
+          items = @driver.find_elements(css: '.cdx-menu-item')
+          matched = items.find do |i|
+            (i.text.to_s.include?(value) rescue false)
+          end
+          if !matched && label && !label.empty?
+            matched = items.find do |i|
+              txt = (i.text.to_s rescue '')
+              next false if txt.empty?
+
+              first_line = txt.split("\n", 2).first.to_s
+              first_line == label
+            end
+          end
+          matched
+        end
+      rescue Selenium::WebDriver::Error::TimeoutError
+        matched = nil
+        items = @driver.find_elements(css: '.cdx-menu-item')
+                       .filter_map { |i| t = (i.text.to_s.strip rescue ''); t.empty? ? nil : t }
+        log "    menu items at timeout (#{items.size}): #{items.first(10).map { |t| t[0, 60] }.inspect}"
+      end
+
+      if matched
+        log "    matched menu item: #{matched.text.to_s.strip[0, 80].inspect}"
+        scroll_to(matched)
+        begin
+          matched.click
+        rescue StandardError
+          @driver.execute_script('arguments[0].click()', matched)
+        end
+      else
+        raise "fill_literal (Z9): no menu match for #{value.inspect} (typed #{typed.inspect})"
+      end
+
     when 'Z6092', 'Z6091' # Wikidata property or item reference
       # Scope to the value sub-slot (-Z6092K1 / -Z6091K1). The slot's
       # top-level contains a Z1K1 type-marker display with its own input;
@@ -689,7 +748,7 @@ class WfBrowser
   end
 
   def short_pause
-    sleep [@delay * 0.4, 0.5].max
+    sleep [@delay * 0.4, 0.15].max
   end
 
   # ── Helpers ──────────────────────────────────────────────────
@@ -752,7 +811,7 @@ class WfBrowser
   # because the happy-path steps all complete in well under a second. We
   # cap at 10s by default: if a step hasn't succeeded by then, bail with a
   # screenshot rather than letting a broken UI path stall the whole run.
-  def slow_wait(timeout: 10, slow_after: 4, tag: 'wait', interval: 0.5)
+  def slow_wait(timeout: 10, slow_after: 4, tag: 'wait', interval: 0.15)
     start = Time.now
     shot = false
     loop do

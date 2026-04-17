@@ -1,0 +1,12 @@
+{
+  "task": "tester",
+  "tester_zid": "Z26185",
+  "function_zid": "Z26184",
+  "summary": "Use case-insensitive string equality (Z10539) so lowercase lemma output passes",
+  "validator": {
+    "call": "Z10539", "name": "case-insensitive string equality",
+    "args": {
+      "Z10539K2": {"label": "expected sargam syllable", "literal": "Sa", "type": "Z6"}
+    }
+  }
+}

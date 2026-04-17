@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Task: edit an existing tester (Z20) on Wikifunctions.
+# Task: create or edit a tester (Z20) on Wikifunctions.
 #
 # A tester has three fields:
 #   - Z20K1: the function being tested
@@ -8,7 +8,7 @@
 #   - Z20K3: the validator (a Z7 tree taking the function's output as its
 #            first argument, returning Z40 true/false)
 #
-# Spec format (edit a tester):
+# Spec format — edit an existing tester:
 #   {
 #     "task": "tester",
 #     "tester_zid": "Z26185",
@@ -17,14 +17,32 @@
 #     "summary": "Use case-insensitive string equality",
 #     "validator": {
 #       "call": "Z10539",
-#       "args": {
-#         "Z10539K2": {"literal": "Sa", "type": "Z6"}
-#       }
+#       "args": { "Z10539K2": {"literal": "Sa", "type": "Z6"} }
 #     }
-#     // test_call is optional; omit to leave it unchanged
+#     // test_call optional; omit to leave it unchanged
 #   }
 #
-# Creation of brand-new testers isn't supported yet — add it when needed.
+# Spec format — create a new tester (no tester_zid):
+#   {
+#     "task": "tester",
+#     "function_zid": "Z33682",
+#     "label": "MIDI 69 in A440 -> 440 Hz",
+#     "summary": "New tester",
+#     "test_call": {
+#       "call": "Z33682",
+#       "args": {
+#         "Z33682K1": {"literal": "69", "type": "Z16683"},
+#         "Z33682K2": {"call": "Z6821", "args": {"Z6821K1": {"literal": "Q2610210", "type": "Z6091"}}}
+#       }
+#     },
+#     "validator": {
+#       "call": "Z31090",
+#       "args": {
+#         "Z31090K2": {"literal": "440", "type": "Z20838"},
+#         "Z31090K3": {"literal": "0.001", "type": "Z20838"}
+#       }
+#     }
+#   }
 
 require_relative 'wf_browser'
 require_relative 'wf_composition_builder'
@@ -38,10 +56,16 @@ class WfTaskTester
   end
 
   def run
-    raise 'tester task requires "tester_zid" (creation not yet supported)' unless @spec['tester_zid']
+    if @spec['tester_zid']
+      @wf.set_function_zid(@spec['function_zid']) if @spec['function_zid']
+      navigate_to_edit(@spec['tester_zid'])
+    elsif @spec['function_zid']
+      @wf.set_function_zid(@spec['function_zid'])
+      navigate_to_function_and_add_tester
+    else
+      raise 'tester task requires tester_zid (edit) or function_zid (create)'
+    end
 
-    @wf.set_function_zid(@spec['function_zid']) if @spec['function_zid']
-    navigate_to_edit(@spec['tester_zid'])
     fetch_metadata
 
     @wf.set_label(@spec['label']) if @spec['label']
@@ -50,10 +74,41 @@ class WfTaskTester
     build_subtree('Z20K3', @spec['validator']) if @spec['validator']
 
     @wf.open_publish_dialog(@spec['summary'])
-    @wf.verify_published
+    new_zid = @wf.verify_published
+    # Testers, like implementations, are disconnected on creation — wait
+    # for the user to toggle "connected" on the function's testers table.
+    if new_zid && !@spec['tester_zid'] && @spec['function_zid']
+      @wf.wait_for_tester_connected(@spec['function_zid'], new_zid)
+    end
+    new_zid
   end
 
   private
+
+  def navigate_to_function_and_add_tester
+    url = "#{WfBrowser::WF_BASE}/view/en/#{@wf.function_zid}"
+    @wf.step "Opening function page: #{url}"
+    @wf.navigate_to(url)
+
+    @wf.log '  Waiting for page to load...'
+    @wf.slow_wait(tag: 'function-page-load') { @wf.safe_find('[data-testid="function-testers-table"]') }
+    @wf.pause
+
+    @wf.step 'Clicking "Add test"...'
+    add_link = @wf.driver.find_element(
+      css: '[data-testid="function-testers-table"] [data-testid="add-link"]'
+    )
+    @wf.scroll_to(add_link)
+    @wf.short_pause
+    add_link.click
+
+    @wf.log '  Waiting for tester editor...'
+    @wf.slow_wait(tag: 'tester-create-mode') do
+      @wf.driver.find_elements(css: '[id*="-Z20K2"], [id*="-Z20K3"]').any?
+    end
+    @wf.log '  Tester editor ready.'
+    @wf.pause
+  end
 
   def navigate_to_edit(tester_zid)
     url = "#{WfBrowser::WF_BASE}/view/en/#{tester_zid}"

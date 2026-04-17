@@ -1,0 +1,34 @@
+{
+  "task": "tester",
+  "function_zid": "Z33682",
+  "label": "MIDI 69 in A440 -> 440 Hz",
+  "summary": "New tester: MIDI 69 (A4) in A440 pitch standard returns 440 Hz.",
+  "test_call": {
+    "call": "Z33682", "name": "frequency of MIDI note number",
+    "args": {
+      "Z33682K1": {"label": "midi note number", "literal": "69", "type": "Z16683"},
+      "Z33682K2": {
+        "label": "pitch standard (A440)",
+        "call": "Z6821", "name": "Fetch Wikidata item",
+        "args": {
+          "Z6821K1": {"literal": "Q2610210", "type": "Z6091"}
+        }
+      }
+    }
+  },
+  "validator": {
+    "call": "Z31090", "name": "same float64 within tolerance",
+    "args": {
+      "Z31090K2": {
+        "label": "target value",
+        "call": "Z20915", "name": "string to float64",
+        "args": { "Z20915K1": {"literal": "440.0", "type": "Z6"} }
+      },
+      "Z31090K3": {
+        "label": "tolerance",
+        "call": "Z20915", "name": "string to float64",
+        "args": { "Z20915K1": {"literal": "0.001", "type": "Z6"} }
+      }
+    }
+  }
+}

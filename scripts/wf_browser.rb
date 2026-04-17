@@ -226,13 +226,23 @@ class WfBrowser
   # runtime raises Z503 (no implementation). Poll the function's Z8K4
   # list until the new impl ZID appears.
   def wait_for_impl_connected(function_zid, impl_zid)
-    return unless function_zid && impl_zid
+    wait_for_function_field(function_zid, 'Z8K4', impl_zid, 'implementation')
+  end
+
+  # Same story for testers — they land in Z8K3 only when toggled connected
+  # on the function's testers table.
+  def wait_for_tester_connected(function_zid, tester_zid)
+    wait_for_function_field(function_zid, 'Z8K3', tester_zid, 'tester')
+  end
+
+  def wait_for_function_field(function_zid, field, wanted_zid, noun)
+    return unless function_zid && wanted_zid
 
     log ''
-    log "Waiting for #{impl_zid} to be connected to #{function_zid}..."
-    log "  (Toggle 'connected' on the implementations table for #{function_zid}.)"
+    log "Waiting for #{wanted_zid} to be connected to #{function_zid}..."
+    log "  (Toggle 'connected' on the #{noun}s table for #{function_zid}.)"
 
-    poll_until(timeout: 86_400, interval: 5, waiting_for: 'implementation connection') do
+    poll_until(timeout: 86_400, interval: 5, waiting_for: "#{noun} connection") do
       uri = URI(WF_API)
       uri.query = URI.encode_www_form(
         action: 'wikilambda_fetch', zids: function_zid, format: 'json'
@@ -242,8 +252,8 @@ class WfBrowser
       next nil unless raw
 
       zobj = raw.is_a?(String) ? JSON.parse(raw) : raw
-      impls = zobj.dig('Z2K2', 'Z8K4') || []
-      impls.include?(impl_zid) ? true : nil
+      entries = zobj.dig('Z2K2', field) || []
+      entries.include?(wanted_zid) ? true : nil
     end
     log "  Connected."
   end
@@ -691,7 +701,10 @@ class WfBrowser
         log "    (no autocomplete dropdown — leaving raw value in the field)"
       end
 
-    when 'Z6', 'Z16683', 'Z13518' # String, Integer, Natural Number
+    when 'Z16683' # Integer — expanded slot has sign (Z16659) + absolute value (Z13518).
+      fill_integer_literal(keypath, value)
+
+    when 'Z6', 'Z13518' # String, Natural Number — single text input
       input = el.find_elements(css: '[data-testid="text-input"], input.cdx-text-input__input, input[type="number"], input')
                 .find { |i| i.displayed? rescue false }
       raise "fill_literal (#{type}): no visible input in #{keypath}" unless input
@@ -715,6 +728,60 @@ class WfBrowser
         log '    Could not find an input. Set this value manually.'
       end
     end
+  end
+
+  # Z16683 integer literals render as an expanded composite in the UI:
+  # a sign dropdown (Z16659 → Z16660 positive / Z16662 negative / Z16661
+  # neutral) and an absolute-value text input (Z13518). A single "type
+  # the number" input doesn't exist.
+  def fill_integer_literal(keypath, value)
+    value_str = value.to_s.strip
+    raise "fill_integer_literal: #{value.inspect} is not a valid integer" unless value_str.match?(/\A[+-]?\d+\z/)
+
+    n = value_str.to_i
+    abs_str = n.abs.to_s
+    sign_label = n.positive? ? 'positive' : (n.negative? ? 'negative' : 'neutral')
+
+    # Sign dropdown (Z16683K1 → Z16659).
+    sign_slot = @driver.find_elements(id: "#{keypath}-Z16683K1").first
+    if sign_slot
+      handle = sign_slot.find_elements(css: '.cdx-select-vue__handle, [role="combobox"]')
+                        .find { |h| h.displayed? rescue false }
+      if handle
+        scroll_to(handle)
+        short_pause
+        open_codex_select(handle)
+        short_pause
+        match = @driver.find_elements(css: '.cdx-menu-item').find do |i|
+          first_line = (i.text.to_s.split("\n", 2).first || '').strip.downcase
+          first_line == sign_label
+        end
+        if match
+          scroll_to(match)
+          begin
+            match.click
+          rescue StandardError
+            @driver.execute_script('arguments[0].click()', match)
+          end
+        else
+          log "    WARNING: no sign menu item matched #{sign_label.inspect}"
+        end
+      end
+    end
+    short_pause
+
+    # Absolute value text input (Z16683K2 → Z13518).
+    abs_slot = @driver.find_elements(id: "#{keypath}-Z16683K2").first || @driver.find_element(id: keypath)
+    abs_input = abs_slot.find_elements(css: 'input.cdx-text-input__input, input[type="text"], input[type="number"]')
+                        .find { |i| i.displayed? rescue false }
+    raise "fill_integer_literal: no visible absolute-value input under #{keypath}" unless abs_input
+
+    scroll_to(abs_input)
+    short_pause
+    @driver.action.move_to(abs_input).click.perform
+    short_pause
+    @driver.action.send_keys(abs_str).perform
+    short_pause
   end
 
   # ── UI primitives: "Edit source" ─────────────────────────────

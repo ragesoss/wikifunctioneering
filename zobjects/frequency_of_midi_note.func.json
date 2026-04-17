@@ -1,0 +1,11 @@
+{
+  "task": "function",
+  "label": "frequency of MIDI note number",
+  "description": "Returns the frequency in Hz of a MIDI note number in a 12-tone equal temperament pitch standard. Computes ref_freq × 2^((midi − ref_midi) / 12).",
+  "inputs": [
+    {"label": "midi note number", "type": "Z16683"},
+    {"label": "pitch standard", "type": "Z6001"}
+  ],
+  "output_type": "Z20838",
+  "summary": "New function: frequency of MIDI note number"
+}

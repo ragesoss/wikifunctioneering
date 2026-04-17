@@ -42,7 +42,15 @@ def load_index():
 
 
 def arg_types(entry):
-    return [a.get("type") for a in (entry.get("args") or [])]
+    """Return only the simple string-typed inputs. Typed lists and other
+    parameterized types show up as dicts (e.g. {"Z1K1":"Z7","Z7K1":"Z881",...})
+    — those can't be exact-matched on a ZID and would break set hashing."""
+    out = []
+    for a in entry.get("args") or []:
+        t = a.get("type")
+        if isinstance(t, str):
+            out.append(t)
+    return out
 
 
 def cmd_functions(args):

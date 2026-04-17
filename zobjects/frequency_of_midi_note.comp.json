@@ -1,0 +1,38 @@
+{
+  "function_zid": "Z33682",
+  "label": "via reference freq × frequency ratio from MIDI distance",
+  "summary": "Add composition: ref_freq × 2^((midi − ref_midi) / 12)",
+  "expect_args": ["midi note number", "pitch standard"],
+  "composition": {
+    "call": "Z21032", "name": "multiply (float64)",
+    "args": {
+      "Z21032K1": {
+        "label": "multiplier (reference frequency)",
+        "call": "Z33603", "name": "reference frequency of pitch standard",
+        "args": {
+          "Z33603K1": {"label": "pitch standard", "ref": "pitch standard"}
+        }
+      },
+      "Z21032K2": {
+        "label": "multiplicand (frequency ratio from semitone distance)",
+        "call": "Z25232", "name": "frequency ratio of semitone distance in 12TET",
+        "args": {
+          "Z25232K1": {
+            "label": "semitone distance from reference",
+            "call": "Z17111", "name": "subtract an Integer",
+            "args": {
+              "Z17111K1": {"label": "midi note number", "ref": "midi note number"},
+              "Z17111K2": {
+                "label": "reference note MIDI number",
+                "call": "Z33606", "name": "MIDI number of reference note",
+                "args": {
+                  "Z33606K1": {"label": "pitch standard", "ref": "pitch standard"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

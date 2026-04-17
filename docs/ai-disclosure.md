@@ -1,6 +1,6 @@
-# AI Disclosure and Wikifunctions Norms
+# AI Disclosure: Wikifunctions and Wikidata
 
-Reference doc summarizing the rules, discussions, and community norms around using AI tools to contribute to Wikifunctions. Last updated 2026-04-15.
+Reference doc summarizing the rules, discussions, and community norms around using AI tools to contribute to Wikifunctions and (increasingly, as our work touches Wikidata) Wikidata. Last updated 2026-04-17.
 
 ## Current rules
 
@@ -85,3 +85,81 @@ The summary should indicate:
 3. What the AI contributed (e.g., "function design and composition drafting", "test case generation", "Python implementation")
 
 This follows the spirit of LZia's recommendation to disclose what specifically AI was used for, even though mandatory disclosure hasn't been adopted yet.
+
+---
+
+## Wikidata norms
+
+Wikidata is a separate project from Wikifunctions, with separate (and more mature) policies. When our sessions lead to Wikidata edits — adding missing claims, fixing modelling gaps, correcting qualifiers — those edits are governed by Wikidata's rules, not Wikifunctions'. Summary of what applies.
+
+### Wikidata:Bots (policy)
+
+The policy's own definition draws the important line:
+
+> Bots (also known as robots) are tools used to make edits **without the necessity of human decision-making**.
+
+Bot accounts require (per [Wikidata:Bots](https://www.wikidata.org/wiki/Wikidata:Bots)):
+- Separate account with "bot" in the username.
+- Approval via [Wikidata:Requests for permissions/Bot](https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot) — a test run of 50–250 edits before the flag is granted.
+- Bot flag set on all edits; respect `maxlag`; settable max-edits-per-minute.
+- Identified operator on the bot's user page; operator is responsible for cleanup.
+
+Our workflow is explicitly **not** a bot under this definition: every edit is individually decided by the human operator (Ragesoss) — the AI drafts, the human reviews the proposed claim, the human clicks Save (or runs the QuickStatements / API call). Human decision-making is in the loop per edit.
+
+### Wikidata:Requests for comment/Mass-editing policy (under discussion, 2026-04-14)
+
+Proposed language defines mass editing as:
+
+> changes [that] are made to existing entities or the addition of new entities without being reviewed individually by the person making the edits and which could not reasonably be done manually.
+
+Our pattern explicitly fails both halves of that test — each edit is individually reviewed, and the batches are always small enough to do manually in principle. So we remain outside the mass-editing scope even if this RfC is adopted as written.
+
+Note: the RfC is not yet adopted, has open opposition, and is likely to be revised. Re-check when the session picks up.
+
+### LLM-specific policy on Wikidata
+
+**There isn't one yet.** There is a [WikiProject Large Language Models](https://www.wikidata.org/wiki/Wikidata:WikiProject_Large_Language_Models) but its talk page makes clear the group is exploratory — tool projects (statement prediction, vandalism detection), no policy statements. No disclosure rule, no LLM-use restrictions.
+
+Contrast [Wikipedia:Large language models](https://en.wikipedia.org/wiki/Wikipedia:Large_language_models) (different project, stricter): disclosure required, generation/rewriting of article content prohibited except for translation and basic copyediting. That policy does **not** apply to Wikidata — different project, different norms — but it's the most developed community thinking on LLM editing in the Wikimedia family and a likely template if/when Wikidata writes its own.
+
+### Meta:Artificial intelligence/Draft policy
+
+Cross-Wikimedia proposal (already summarised above for Wikifunctions) anticipates a baseline requiring disclosure and human review, with projects allowed to opt in to stricter rules. Wikidata is not listed on the policy-by-project tracker; if the opt-out default is adopted, Wikidata would get the stricter "prohibit-except-translation/copyedit" behaviour by default — which would block a lot of current practice, so an opt-in to the baseline is the likely outcome. But the proposal is draft.
+
+### Rate limits / etiquette
+
+Not formally policy for non-bot editors, but the standard expectation:
+
+- Respect [`maxlag`](https://www.mediawiki.org/wiki/Manual:Maxlag_parameter) (stop when replag > 5 seconds).
+- Follow [API:Etiquette](https://www.mediawiki.org/wiki/API:Etiquette) — serial requests, not parallel; reasonable delay between edits.
+- QuickStatements' own UI throttles to roughly one edit every 3–5 seconds by default; that's a safe baseline for API-driven tooling too.
+
+## Our approach on Wikidata
+
+The summary version: treat Wikidata edits the same way we treat Wikifunctions edits — human-reviewed, per-edit decisions, disclosed — and add a Wikidata-flavoured disclosure string to edit summaries even though Wikidata itself doesn't currently require it.
+
+### Why disclose on Wikidata if it's not required
+
+1. Consistency with our Wikifunctions practice.
+2. Forward-compatibility: the Meta baseline policy and ongoing community discussion both lean toward disclosure. Starting disclosed means nothing has to change when norms tighten.
+3. The ACM CHI-style argument LZia made on Wikifunctions — "intentionality and slow down at the moment of publishing" — applies equally to Wikidata claims.
+4. If a contribution is ever questioned, having "Created with AI assistance" in the summary is the difference between a conversation and an accusation.
+
+### Edit summary format on Wikidata
+
+For edits made through the Wikidata API, use an edit summary like:
+
+```
+Add relative-minor claim; Created with AI assistance (Claude, claim drafting and qualifier modelling research)
+```
+
+Same three elements as Wikifunctions — that AI was used, which AI, what it contributed — adapted to match what's actually being done at Wikidata (claim work, lexeme sense additions, qualifier fixes, etc.).
+
+For QuickStatements batches, add `/* AI-assisted, Claude */` or similar to the batch summary field so the flag shows up in edit history.
+
+### What stays a human-only call
+
+- Deciding which data to add (what's missing, what's correct, what the source is).
+- Reviewing each proposed edit before it goes through.
+- Anything controversial or potentially contested — AI-drafted, but the human both reviews and is the one whose account goes on the edit.
+- Bulk modelling changes that could affect many existing consumers (don't do these without opening a discussion first, per the mass-editing RfC spirit).

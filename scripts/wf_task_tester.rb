@@ -44,8 +44,10 @@
 #     }
 #   }
 
+require 'json'
 require_relative 'wf_browser'
 require_relative 'wf_composition_builder'
+require_relative 'wf_zobject_emitter'
 
 class WfTaskTester
   include WfCompositionBuilder
@@ -53,6 +55,95 @@ class WfTaskTester
   def initialize(wf, spec)
     @wf = wf
     @spec = spec
+  end
+
+  # API-mode run: drive the raw-JSON userscript for either an edit
+  # (spec has tester_zid) or a create (spec has function_zid only).
+  # Does not click Save — the user reviews and saves themselves.
+  def run_api
+    if @spec['tester_zid']
+      run_api_edit
+    elsif @spec['function_zid']
+      run_api_create
+    else
+      raise 'tester task requires tester_zid (edit) or function_zid (create)'
+    end
+  end
+
+  def run_api_edit
+    tester_zid = @spec['tester_zid']
+    @wf.set_function_zid(@spec['function_zid']) if @spec['function_zid']
+
+    zids = [@wf.function_zid].compact
+    zids += collect_call_zids(@spec['test_call']) if @spec['test_call']
+    zids += collect_call_zids(@spec['validator']) if @spec['validator']
+    @wf.fetch_metadata_for(zids.uniq)
+
+    summary = @wf.ai_summary(@spec['summary'])
+    @wf.drive_raw_json_edit(zid: tester_zid, summary: summary) do |zobj|
+      content = zobj['Z2K2']
+      unless content && content['Z1K1'] == 'Z20'
+        raise "#{tester_zid}: Z2K2 is #{content&.dig('Z1K1').inspect}, expected Z20"
+      end
+
+      if @spec['test_call']
+        content['Z20K2'] = WfZObjectEmitter.emit(
+          @spec['test_call'],
+          function_zid: @wf.function_zid,
+          api_info: @wf.api_info
+        )
+      end
+      if @spec['validator']
+        content['Z20K3'] = WfZObjectEmitter.emit(
+          @spec['validator'],
+          function_zid: @wf.function_zid,
+          api_info: @wf.api_info
+        )
+      end
+
+      if @spec['label']
+        zobj['Z2K3'] ||= { 'Z1K1' => 'Z12', 'Z12K1' => ['Z11'] }
+        WfZObjectEmitter.set_en_label!(zobj['Z2K3'], @spec['label'])
+      end
+
+      zobj
+    end
+
+    tester_zid
+  end
+
+  def run_api_create
+    @wf.set_function_zid(@spec['function_zid'])
+
+    zids = [@wf.function_zid]
+    zids += collect_call_zids(@spec['test_call']) if @spec['test_call']
+    zids += collect_call_zids(@spec['validator']) if @spec['validator']
+    @wf.fetch_metadata_for(zids.uniq)
+
+    content = { 'Z1K1' => 'Z20', 'Z20K1' => @wf.function_zid }
+    if @spec['test_call']
+      content['Z20K2'] = WfZObjectEmitter.emit(
+        @spec['test_call'],
+        function_zid: @wf.function_zid,
+        api_info: @wf.api_info
+      )
+    end
+    if @spec['validator']
+      content['Z20K3'] = WfZObjectEmitter.emit(
+        @spec['validator'],
+        function_zid: @wf.function_zid,
+        api_info: @wf.api_info
+      )
+    end
+
+    zobj = WfZObjectEmitter.new_persistent(content, label: @spec['label'])
+
+    @wf.drive_raw_json_create(
+      zobject_json: JSON.pretty_generate(zobj),
+      summary: @wf.ai_summary(@spec['summary']),
+      landing_zid: @wf.function_zid
+    )
+    nil
   end
 
   def run

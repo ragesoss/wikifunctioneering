@@ -10,9 +10,13 @@ require 'json'
 require 'net/http'
 require 'uri'
 
+require_relative 'wf_api'
+
 AI_DISCLOSURE = 'Created with AI assistance (Claude Opus 4.6)'
 
 class WfBrowser
+  include WfApi
+
   WF_BASE = 'https://www.wikifunctions.org'
   WF_API = "#{WF_BASE}/w/api.php"
   PROFILE_DIR = File.expand_path('../../.browser-profile', __FILE__)
@@ -157,6 +161,14 @@ class WfBrowser
     end
   end
 
+  # Append the AI disclosure to a user-provided edit summary (or use the
+  # disclosure alone if the user summary is empty). Used by both the UI
+  # publish dialog and the API-mode edit path so both leave the same
+  # trail in page history.
+  def ai_summary(summary)
+    summary.to_s.empty? ? AI_DISCLOSURE : "#{summary} -- #{AI_DISCLOSURE}"
+  end
+
   # ── Publish dialog and verification ──────────────────────────
 
   def open_publish_dialog(summary)
@@ -170,7 +182,7 @@ class WfBrowser
     slow_wait(tag: 'publish-dialog') { safe_find('[data-testid="publish-dialog"]') }
     short_pause
 
-    full_summary = summary.to_s.empty? ? AI_DISCLOSURE : "#{summary} -- #{AI_DISCLOSURE}"
+    full_summary = ai_summary(summary)
     step "Edit summary: #{full_summary}"
     summary_input = @driver.find_element(
       css: '.ext-wikilambda-app-publish-dialog__summary-input input, ' \
@@ -782,6 +794,90 @@ class WfBrowser
     short_pause
     @driver.action.send_keys(abs_str).perform
     short_pause
+  end
+
+  # ── Raw-JSON userscript driver ───────────────────────────────
+  # Works with userscripts/wikilambda-edit-source.js. We drive the
+  # userscript's editor rather than POST directly so the user sees
+  # exactly what's being saved and clicks Save themselves.
+
+  def wait_for_raw_json_userscript
+    slow_wait(tag: 'userscript-load', timeout: 15) do
+      @driver.execute_script(
+        'return !!document.getElementById("pt-wf-raw-json-create")'
+      )
+    end
+  rescue Selenium::WebDriver::Error::TimeoutError
+    raise 'Raw-JSON userscript did not load. Install ' \
+          'userscripts/wikilambda-edit-source.js in your Wikifunctions common.js.'
+  end
+
+  def click_raw_json_portlet(kind)
+    id = kind == :edit ? 'pt-wf-raw-json-edit' : 'pt-wf-raw-json-create'
+    portlet = @driver.find_element(id: id)
+    scroll_to(portlet)
+    short_pause
+    portlet.click
+  end
+
+  def wait_for_raw_json_textarea
+    slow_wait(tag: 'raw-json-textarea') { safe_find('#wf-raw-json-textarea') }
+  end
+
+  # Selenium's .clear + .send_keys is slow and event-fragile for large
+  # JSON blobs; setting .value directly + dispatching the events the
+  # userscript (and the "no changes" guard) rely on is faster and more
+  # reliable.
+  def set_textarea_value(el, value)
+    @driver.execute_script(<<~JS, el, value)
+      const el = arguments[0];
+      const value = arguments[1];
+      el.focus();
+      el.value = value;
+      el.dispatchEvent(new Event('input',  { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    JS
+  end
+
+  def fill_raw_json_summary(summary)
+    input = @driver.find_element(id: 'wf-raw-json-summary')
+    input.clear
+    input.send_keys(summary)
+  end
+
+  # Edit flow: navigate to the target Z-page, click Edit Raw JSON,
+  # wait for the userscript's fetch-populated textarea, yield the
+  # parsed JSON for the caller to mutate, then write the mutated
+  # result back and fill the summary. Does NOT click Save — the
+  # user reviews and saves themselves.
+  def drive_raw_json_edit(zid:, summary:)
+    navigate_to("#{WF_BASE}/wiki/#{zid}")
+    wait_for_raw_json_userscript
+    step "Opening Edit Raw JSON for #{zid}..."
+    click_raw_json_portlet(:edit)
+    textarea = wait_for_raw_json_textarea
+    current = textarea.attribute('value').to_s
+    raise "Edit Raw JSON: textarea empty for #{zid}" if current.empty?
+
+    parsed = JSON.parse(current)
+    modified = yield(parsed)
+    set_textarea_value(textarea, JSON.pretty_generate(modified))
+    fill_raw_json_summary(summary)
+  end
+
+  # Create flow: navigate to a context page (the function we're
+  # adding to, if known), click Create Raw JSON, fill the textarea
+  # with our pre-built Z2 JSON and fill the summary. Does NOT click
+  # Save.
+  def drive_raw_json_create(zobject_json:, summary:, landing_zid: nil)
+    landing = landing_zid ? "#{WF_BASE}/wiki/#{landing_zid}" : WF_BASE
+    navigate_to(landing)
+    wait_for_raw_json_userscript
+    step 'Opening Create Raw JSON...'
+    click_raw_json_portlet(:create)
+    textarea = wait_for_raw_json_textarea
+    set_textarea_value(textarea, zobject_json)
+    fill_raw_json_summary(summary)
   end
 
   # ── UI primitives: "Edit source" ─────────────────────────────

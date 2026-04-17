@@ -42,3 +42,24 @@ Z28297: value of claim
 **Test case:** Obama (Q76), P39 (position held), Q11696 (President), P1365 (replaces) → Q207 (George W. Bush)
 
 **Relationship to Z33573:** Z33573 selects a claim by highest rank — sufficient when there's only one claim for the property (or one with preferred rank). This function selects by value match — needed when multiple claims exist for the same property.
+
+## lexemes by lemma (language, category)
+
+Platform-level primitive needed to rewrite string→lexeme lookups (like Z29517) as pure compositions instead of hardcoded Python dicts.
+
+**Signature:**
+- `lemma` — Z6 (String)
+- `language` — Z60
+- `category` — Z6091 (lexical category item, e.g. Q1084 for noun)
+- **Output:** list of Z6005 (lexemes)
+
+**Why it's needed:** The catalog has lexeme→lemma helpers (Z22138 "English lemma string", Z21806 "lemma string from lexeme and lang", etc.) but nothing goes the reverse direction. Z6830 does reverse-P5137 (item → lexemes) and Z33415 filters a lexeme list by target lemma, so once you *have* a list of candidate lexemes you can find one by lemma — but there's no way to get the list from a lemma string in the first place. On Wikidata this would be a SPARQL or `wbsearchentities&type=lexeme` query.
+
+**Why it's blocked:** Wikifunctions' Python runtime is RustPython on wasmedge — a WASM sandbox with no outbound network. A handful of Z14s in the catalog reference `requests.get` / `urllib.request` but they're all sandbox experiments, broken examples, or disconnected. So a code implementation that queries Wikidata from inside a function is not a current platform capability. Until native lexeme search lands (or sandbox egress is added), this primitive can't be built as a user-contributed function.
+
+**Once it exists, Z29517 rewrite becomes:**
+1. Call this primitive with `(lemma=input, language=English, category=noun)` → candidate lexemes.
+2. Apply `Z33415` ("best lexeme from list with label") with the candidates, the scale-degree item, and the input lemma → a single lexeme.
+3. Walk its senses to find the one whose `P5137` points to the scale-degree item → return that sense's ID. (Step 3 may want its own small helper, "sense of lexeme matching P5137 target", but that's pure composition over existing sense-list primitives.)
+
+**Benefit:** all solfege variants (sol/so, ti/si, do/ut, etc.) resolve automatically after a Wikidata sense addition on the relevant lexeme — no Wikifunctions code edit required.

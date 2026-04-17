@@ -1,0 +1,33 @@
+{
+  "function_zid": "Z26184",
+  "label": "solfege to sargam via Wikidata lexemes",
+  "summary": "Solfege syllable → scale degree item → svara item (via P460) → English sargam lexeme lemma (via Z33668)",
+  "expect_args": ["solfege note"],
+  "composition": {
+    "call": "Z33668", "name": "word for concept",
+    "args": {
+      "Z33668K1": {
+        "label": "svara item reference",
+        "call": "Z28787", "name": "item from item and property (references)",
+        "args": {
+          "Z28787K1": {
+            "label": "scale degree item reference",
+            "call": "Z23756", "name": "Wikidata item reference from Wikidata item",
+            "args": {
+              "Z23756K1": {
+                "label": "scale degree item",
+                "call": "Z30555", "name": "Wikidata item for solfege syllable",
+                "args": {
+                  "Z30555K1": {"ref": "solfege note"}
+                }
+              }
+            }
+          },
+          "Z28787K2": {"label": "P460 (said to be the same as)", "literal": "P460", "type": "Z6092"}
+        }
+      },
+      "Z33668K2": {"label": "English", "literal": "Z1002", "type": "Z9"},
+      "Z33668K3": {"label": "Lexical category (noun)", "literal": "Q1084", "type": "Z6091"}
+    }
+  }
+}

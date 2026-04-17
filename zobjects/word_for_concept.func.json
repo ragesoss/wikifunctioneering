@@ -1,0 +1,12 @@
+{
+  "task": "function",
+  "label": "word for concept",
+  "description": "Given a Wikidata item, a language, and a lexical category, returns the lemma of the best-ranked lexeme linked to that item (via 'item for this sense', P5137) in that language and category.",
+  "inputs": [
+    {"label": "concept", "type": "Z6091"},
+    {"label": "language", "type": "Z60"},
+    {"label": "lexical category", "type": "Z6091"}
+  ],
+  "output_type": "Z6",
+  "summary": "New function: word for concept"
+}

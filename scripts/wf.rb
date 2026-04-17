@@ -78,11 +78,14 @@ begin
 rescue StandardError => e
   puts "\nERROR: #{e.message}"
   e.backtrace.first(5).each { |line| puts "  #{line}" }
-  puts 'Browser left open for inspection.'
+  # Capture a final screenshot for post-mortem, then quit. (We used to
+  # leave the browser open waiting for Ctrl+C, which made the whole run
+  # stall indefinitely after any failed step.)
   begin
-    sleep
-  rescue Interrupt
-    puts "\nQuitting."
-    wf.quit
+    wf.save_debug_screenshot('final-error')
+  rescue StandardError
+    # best effort
   end
+  wf.quit
+  exit 1
 end

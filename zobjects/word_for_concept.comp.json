@@ -1,0 +1,22 @@
+{
+  "function_zid": "Z33668",
+  "label": "via best lexeme lemma",
+  "summary": "Add composition: Z33071 (best lexeme by category+item+P5137+language) wrapped by Z21806 (lemma string from lexeme and lang)",
+  "expect_args": ["concept", "language", "lexical category"],
+  "composition": {
+    "call": "Z21806", "name": "lemma string from lexeme and lang",
+    "args": {
+      "Z21806K1": {
+        "label": "best lexeme",
+        "call": "Z33071", "name": "best lexeme with category from Wikidata item",
+        "args": {
+          "Z33071K1": {"label": "lexical category", "ref": "lexical category"},
+          "Z33071K2": {"label": "concept", "ref": "concept"},
+          "Z33071K3": {"label": "P5137 (item for this sense)", "literal": "P5137", "type": "Z6092"},
+          "Z33071K4": {"label": "language", "ref": "language"}
+        }
+      },
+      "Z21806K2": {"label": "language", "ref": "language"}
+    }
+  }
+}

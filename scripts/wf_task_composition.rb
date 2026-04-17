@@ -22,7 +22,12 @@ class WfTaskComposition
     @wf.set_label(@spec['label'])
     build_tree
     @wf.open_publish_dialog(@spec['summary'])
-    @wf.verify_published
+    new_zid = @wf.verify_published
+    # New implementations come in "disconnected" — wait for the user to
+    # toggle "connected" on the function page before reporting done, so
+    # the runtime actually uses this impl on the next call.
+    @wf.wait_for_impl_connected(@spec['function_zid'], new_zid) if new_zid && @spec['function_zid']
+    new_zid
   end
 
   private
@@ -57,7 +62,7 @@ class WfTaskComposition
 
     @wf.log '  Waiting for page to load...'
     @wf.driver.manage.timeouts.implicit_wait = 0
-    Selenium::WebDriver::Wait.new(timeout: 30).until { @wf.safe_find('[data-testid="function-implementations-table"]') }
+    @wf.slow_wait(tag: 'function-page-load') { @wf.safe_find('[data-testid="function-implementations-table"]') }
     @wf.log "  Function page loaded: #{@wf.function_zid}"
     @wf.pause
   end
@@ -73,7 +78,7 @@ class WfTaskComposition
     add_link.click
 
     @wf.log '  Waiting for implementation editor...'
-    Selenium::WebDriver::Wait.new(timeout: 30).until { @wf.safe_find('[data-testid="implementation-radio"]') }
+    @wf.slow_wait(tag: 'impl-editor-ready') { @wf.safe_find('[data-testid="implementation-radio"]') }
     @wf.log '  Implementation editor ready.'
     @wf.pause
   end
@@ -84,13 +89,13 @@ class WfTaskComposition
     @wf.navigate_to(url)
 
     @wf.log '  Waiting for page to load...'
-    Selenium::WebDriver::Wait.new(timeout: 30).until { @wf.safe_find('.ext-wikilambda-app') }
+    @wf.slow_wait(tag: 'impl-page-load') { @wf.safe_find('.ext-wikilambda-app') }
     @wf.pause
 
     @wf.click_edit_source
 
     @wf.log '  Waiting for implementation editor...'
-    Selenium::WebDriver::Wait.new(timeout: 30).until { @wf.safe_find('[data-testid="implementation-radio"]') }
+    @wf.slow_wait(tag: 'edit-mode-ready') { @wf.safe_find('[data-testid="implementation-radio"]') }
     @wf.log '  Edit mode ready.'
     @wf.pause
   end
@@ -178,7 +183,7 @@ class WfTaskComposition
       @wf.pause
     end
 
-    z7k1 = Selenium::WebDriver::Wait.new(timeout: 30).until do
+    z7k1 = @wf.slow_wait(tag: 'composition-root-expand') do
       @wf.driver.find_elements(css: '[id*="Z14K2"][id*="Z7K1"]')
                .find { |el| el.attribute('class')&.include?('object-key-value') }
     end
@@ -204,7 +209,7 @@ class WfTaskComposition
       return if args.empty?
 
       @wf.log "  Waiting for argument fields..."
-      Selenium::WebDriver::Wait.new(timeout: 60).until { @wf.safe_find("[id='#{first_arg_id}']") }
+      @wf.slow_wait(tag: "arg-fields-#{zid}") { @wf.safe_find("[id='#{first_arg_id}']") }
     end
 
     @wf.short_pause
@@ -218,6 +223,12 @@ class WfTaskComposition
     label = arg_label_for(parent_zid, arg_key, node)
     keypath = "#{parent_keypath}-#{arg_key}"
 
+    # Slots appear collapsed by default after their parent function is
+    # selected. Expand up front so the mode selector and inner controls
+    # are reachable regardless of which branch we take below.
+    @wf.expand_at(keypath)
+    @wf.short_pause
+
     if node['call']
       @wf.step "  #{label} -> function call: #{node['call']} (#{func_name(node['call'], node)})"
       @wf.switch_mode(keypath, 'Z7')
@@ -230,11 +241,15 @@ class WfTaskComposition
       @wf.step "  #{label} -> argument reference: #{node['ref']}"
       @wf.switch_mode(keypath, 'Z18')
       @wf.pause
+      @wf.expand_at(keypath)
+      @wf.pause
       @wf.select_arg_ref(keypath, node['ref'])
       @wf.pause
 
     elsif node['literal']
       @wf.step "  #{label} -> literal #{node['type']}: #{node['literal']}"
+      @wf.expand_at(keypath)
+      @wf.pause
       @wf.fill_literal(keypath, node['literal'], node['type'])
       @wf.pause
     end

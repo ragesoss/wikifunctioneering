@@ -34,10 +34,17 @@ class WfBrowser
   def launch
     log "Launching #{@browser} (profile: #{PROFILE_DIR})..."
 
-    # Clear stale lock files from previous sessions
-    %w[SingletonLock SingletonSocket SingletonCookie].each do |f|
+    # Refuse to proceed if another browser is live on this profile — launching
+    # a second instance with the same user-data-dir corrupts cookies and logs
+    # the first instance out.
+    ensure_profile_free!
+
+    # Clean up lock files left behind by a crashed/killed previous session.
+    # (ensure_profile_free! has already confirmed these don't belong to a live
+    # process.)
+    %w[SingletonLock SingletonSocket SingletonCookie lock .parentlock].each do |f|
       path = File.join(PROFILE_DIR, f)
-      File.delete(path) if File.exist?(path)
+      File.delete(path) if File.symlink?(path) || File.exist?(path)
     end
 
     case @browser
@@ -154,13 +161,13 @@ class WfBrowser
 
   def open_publish_dialog(summary)
     step 'Opening publish dialog'
-    publish_btn = @wait.until { safe_find('[data-testid="publish-button"]') }
+    publish_btn = slow_wait(tag: 'publish-button') { safe_find('[data-testid="publish-button"]') }
     scroll_to(publish_btn)
     short_pause
     publish_btn.click
     pause
 
-    @wait.until { safe_find('[data-testid="publish-dialog"]') }
+    slow_wait(tag: 'publish-dialog') { safe_find('[data-testid="publish-dialog"]') }
     short_pause
 
     full_summary = summary.to_s.empty? ? AI_DISCLOSURE : "#{summary} -- #{AI_DISCLOSURE}"
@@ -179,7 +186,10 @@ class WfBrowser
     log 'Click Publish to finalize. The script will verify afterwards.'
 
     pre_url = @driver.current_url
-    new_zid = poll_until(timeout: 300, interval: 3, waiting_for: 'publish') do
+    # Indefinite wait — the user may step away to review before clicking
+    # Publish. 24h is long enough to act as "indefinite" for any real
+    # session while still guaranteeing the process eventually exits.
+    new_zid = poll_until(timeout: 86_400, interval: 3, waiting_for: 'publish') do
       url = @driver.current_url
       next nil if url == pre_url
 
@@ -208,6 +218,34 @@ class WfBrowser
     end
 
     new_zid
+  end
+
+  # After publishing a new Z14 implementation, Wikifunctions does not
+  # auto-connect it to its function — the user has to toggle "connected"
+  # in the implementations table on the function page. Until then the
+  # runtime raises Z503 (no implementation). Poll the function's Z8K4
+  # list until the new impl ZID appears.
+  def wait_for_impl_connected(function_zid, impl_zid)
+    return unless function_zid && impl_zid
+
+    log ''
+    log "Waiting for #{impl_zid} to be connected to #{function_zid}..."
+    log "  (Toggle 'connected' on the implementations table for #{function_zid}.)"
+
+    poll_until(timeout: 86_400, interval: 5, waiting_for: 'implementation connection') do
+      uri = URI(WF_API)
+      uri.query = URI.encode_www_form(
+        action: 'wikilambda_fetch', zids: function_zid, format: 'json'
+      )
+      data = JSON.parse(Net::HTTP.get(uri))
+      raw = data.dig(function_zid, 'wikilambda_fetch')
+      next nil unless raw
+
+      zobj = raw.is_a?(String) ? JSON.parse(raw) : raw
+      impls = zobj.dig('Z2K2', 'Z8K4') || []
+      impls.include?(impl_zid) ? true : nil
+    end
+    log "  Connected."
   end
 
   # ── UI primitives: labels ────────────────────────────────────
@@ -242,7 +280,7 @@ class WfBrowser
 
   # ── UI primitives: lookups ───────────────────────────────────
 
-  def select_in_lookup(element_id, zid)
+  def select_in_lookup(element_id, zid, label: nil)
     container = @driver.find_element(id: element_id)
     begin
       input = container.find_element(css: 'input.cdx-text-input__input')
@@ -253,12 +291,114 @@ class WfBrowser
     end
     scroll_to(input)
     short_pause
-    input.clear
+    label ||= @api_info.dig(zid, :name).to_s
+
+    # Pre-populated Z7K1 slots (auto-selected by type compatibility) are the
+    # hard case. `.clear` leaves the underlying Vue/Codex component state in
+    # place, so newly-typed characters get appended (e.g. "Z22696Z33071"),
+    # which matches no suggestion and the fallback picks a wrong function.
+    # We clear with a multi-pronged approach: click to focus, remove any
+    # chip, JS-nullify value with synthetic input/change events, and
+    # select-all + backspace.
+    clear_lookup_field(container, input)
     input.send_keys(zid)
-    sleep 2
-    input.send_keys(:arrow_down)
+
+    # Wait for the menu to render a matching suggestion, then click it
+    # natively. Two things had to change together:
+    # - `dispatchEvent(new MouseEvent)` doesn't commit Codex menu selections
+    #   (same story as switch_mode); use Selenium's native click instead.
+    # - A fixed `sleep 2` was sometimes too short after the clear/scroll
+    #   sequence; retrying in a wait.until handles variable menu-render
+    #   latency without over-sleeping on the fast path.
+    matched = nil
+    begin
+      slow_wait(tag: "lookup-#{zid}") do
+        # Don't filter by `.displayed?` — Selenium treats items scrolled out
+        # of a scrollable dropdown as not displayed, so the screenshot-
+        # visible items are often only the first N of many. Scroll+native
+        # click (below) will bring the real match into view.
+        # Match by ZID-in-text OR the function's label prefix: some menu
+        # renders include "(Z#####)" in the text, others only show the
+        # label. Label-prefix (not substring) avoids collisions between
+        # functions whose labels share a prefix.
+        matched = @driver.find_elements(css: '.cdx-menu-item').find do |i|
+          txt = (i.text.to_s rescue '')
+          next false if txt.empty?
+
+          txt.include?(zid) || (!label.empty? && txt.start_with?(label))
+        end
+        matched
+      end
+    rescue Selenium::WebDriver::Error::TimeoutError
+      matched = nil
+      # Log menu items that actually have text — the DOM has many collapsed
+      # menus (mode selectors, etc.) whose items are empty when closed.
+      items = @driver.find_elements(css: '.cdx-menu-item')
+      with_text = items.filter_map do |i|
+        txt = (i.text.to_s.strip.gsub("\n", ' | '))[0, 120]
+        txt.empty? ? nil : txt
+      end
+      log "    menu items with text at timeout (#{with_text.size} of #{items.size}):"
+      with_text.first(20).each { |t| log "      #{t.inspect}" }
+    end
+
+    if matched
+      log "    matched menu item: #{matched.text.to_s.strip.gsub("\n", ' | ')[0, 80].inspect}"
+      scroll_to(matched)
+      begin
+        matched.click
+      rescue Selenium::WebDriver::Error::ElementNotInteractableError,
+             Selenium::WebDriver::Error::ElementClickInterceptedError
+        @driver.execute_script('arguments[0].click()', matched)
+      end
+    else
+      log "    WARNING: no menu item matched #{zid} — aborting (fallback would pick wrong function)"
+      raise "select_in_lookup could not find #{zid} in the menu"
+    end
     short_pause
-    input.send_keys(:return)
+  end
+
+  def clear_lookup_field(container, input)
+    # 1. Click any chip-remove button in the container. Vue-backed Codex
+    #    lookups render a selected value as a chip with an X close button;
+    #    `.clear` on the input does not remove the chip.
+    selectors = [
+      '.cdx-chip-input__remove-button',
+      '.cdx-chip__close',
+      '.cdx-chip__icon--remove',
+      'button[aria-label*="emove"]',
+      'button[aria-label*="lear"]'
+    ]
+    container.find_elements(css: selectors.join(', ')).each do |btn|
+      begin
+        btn.click if btn.displayed?
+      rescue StandardError
+        # best effort
+      end
+    end
+    short_pause
+
+    # 2. Focus the input so keyboard events go to the right place.
+    begin
+      input.click
+    rescue StandardError
+      # already focused, or intercepted — we'll still try to clear
+    end
+
+    # 3. JS-nullify the value and dispatch input/change events so Vue's
+    #    v-model updates. This is the only path that reliably resets
+    #    internal component state when .clear + chip-close both fail.
+    @driver.execute_script(<<~JS, input)
+      const el = arguments[0];
+      el.focus();
+      el.value = '';
+      el.dispatchEvent(new Event('input',  { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    JS
+
+    # 4. Select-all + backspace as a belt-and-suspenders keyboard clear.
+    input.send_keys([:control, 'a'])
+    input.send_keys(:backspace)
     short_pause
   end
 
@@ -282,39 +422,45 @@ class WfBrowser
     btn.click
     short_pause
 
-    mode_labels = {
-      'Z7' => 'Function call',
-      'Z9' => 'Reference',
-      'Z18' => 'Argument reference'
-    }
-    label = mode_labels[mode_value] || mode_value
+    # Click the matching menu item natively. `dispatchEvent(new MouseEvent)`
+    # doesn't drive Codex's Vue `select-item` pipeline — the menu closed but
+    # no selection committed, leaving the field in its original literal mode
+    # even though the script proceeded as if switched.
+    # Match by the `type` attribute (Z7/Z9/Z18) — precise and i18n-proof.
+    slow_wait(tag: "mode-switch-#{mode_value}") do
+      item = @driver.find_elements(css: ".cdx-menu-item[type='#{mode_value}']")
+                    .find { |i| i.displayed? rescue false }
+      next false unless item
 
-    @wait.until do
-      @driver.execute_script(<<~JS, label)
-        const items = document.querySelectorAll('.cdx-menu-item');
-        for (const item of items) {
-          if (item.offsetParent !== null && item.textContent.trim().includes(arguments[0])) {
-            item.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-            item.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-            item.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-            return true;
-          }
-        }
-        return false;
-      JS
+      scroll_to(item)
+      item.click
+      true
     end
+    short_pause
   end
 
   # ── UI primitives: expand/collapse ───────────────────────────
 
   def expand_at(keypath)
-    z7k1_id = "#{keypath}-Z7K1"
-    return if safe_find("[id='#{z7k1_id}']")
-
     el = @driver.find_element(id: keypath)
-    click_first(el,
-                '[data-testid="object-to-string-link"]',
-                '[data-testid="expanded-toggle"]')
+    toggle = el.find_elements(css: '[data-testid="expanded-toggle"]').first
+    return unless toggle
+    return unless toggle.displayed? rescue false
+    # `disabled` means this is a leaf with nothing to expand.
+    return if toggle.attribute('disabled')
+
+    # Only expand when currently collapsed — avoid toggling an already-
+    # expanded slot back to collapsed. Works uniformly for Z7 / Z18 / Z9 /
+    # literal slots (all share the same toggle with `…--collapsed` icon
+    # class when shut).
+    collapsed = toggle.find_elements(
+      css: '.ext-wikilambda-app-expanded-toggle__icon--collapsed'
+    ).first
+    return unless collapsed
+
+    scroll_to(toggle)
+    short_pause
+    toggle.click
   end
 
   # ── UI primitives: argument references ───────────────────────
@@ -340,16 +486,96 @@ class WfBrowser
       # Not a native select
     end
 
-    handle = el.find_element(css: '.cdx-select__handle, [role="combobox"]')
+    # Scope to the Z18K1 sub-slot. After switching a slot to Z18 mode, the
+    # original literal inputs (e.g., a Wikidata item lookup with role=
+    # "combobox") can linger hidden in the DOM, and a broader selector may
+    # grab the wrong element.
+    #
+    # Diag: log the actual child IDs so we know what to scope to.
+    child_ids = @driver.find_elements(css: "[id^='#{keypath}-']").map { |e| e.attribute('id') }
+    log "    children of #{keypath}: #{child_ids.inspect}"
+
+    z18_slot = @driver.find_elements(id: "#{keypath}-Z18K1").first || el
+    handle = z18_slot.find_elements(css: '.cdx-select__handle, [role="combobox"], select')
+                     .find { |h| h.displayed? rescue false }
+    unless handle
+      log "    WARNING: no arg-ref select handle found inside #{keypath}-Z18K1 — aborting"
+      raise "select_arg_ref could not find the dropdown handle"
+    end
+
     scroll_to(handle)
     short_pause
-    handle.click
+
+    log "    handle tag=<#{handle.tag_name}> " \
+        "class=#{handle.attribute('class').to_s[0, 80].inspect} " \
+        "role=#{handle.attribute('role').inspect} " \
+        "testid=#{handle.attribute('data-testid').inspect}"
+
+    open_codex_select(handle)
     short_pause
 
-    arg_keys = impl_args.keys
-    position = arg_keys.index(arg_key) || 0
-    (position + 1).times { handle.send_keys(:arrow_down); sleep 0.2 }
-    handle.send_keys(:return)
+    # Click the menu item whose text matches the ref name — more robust
+    # than arrow-down counting (which breaks if the dropdown has extra
+    # items, or if its open-state pre-highlights one).
+    matched = nil
+    begin
+      slow_wait(tag: "arg-ref-#{ref_name}") do
+        matched = @driver.find_elements(css: '.cdx-menu-item')
+                         .find { |i| (i.text.to_s.strip.casecmp(ref_name) == 0 rescue false) }
+        matched
+      end
+    rescue Selenium::WebDriver::Error::TimeoutError
+      matched = nil
+    end
+
+    if matched
+      scroll_to(matched)
+      begin
+        matched.click
+      rescue Selenium::WebDriver::Error::ElementNotInteractableError,
+             Selenium::WebDriver::Error::ElementClickInterceptedError
+        @driver.execute_script('arguments[0].click()', matched)
+      end
+    else
+      log "    WARNING: arg-ref dropdown did not contain '#{ref_name}' — aborting"
+      raise "select_arg_ref could not find '#{ref_name}'"
+    end
+  end
+
+  # Try a sequence of strategies to open a Codex select / combobox.
+  # Returns when the element appears opened (aria-expanded=true) or after
+  # all strategies are exhausted.
+  def open_codex_select(handle)
+    strategies = [
+      -> { @driver.action.move_to(handle).click.perform },
+      -> { handle.click },
+      -> { @driver.execute_script('arguments[0].click()', handle) },
+      -> {
+        @driver.execute_script('arguments[0].focus()', handle)
+        sleep 0.1
+        handle.send_keys(:space)
+      },
+      -> {
+        @driver.execute_script('arguments[0].focus()', handle)
+        sleep 0.1
+        handle.send_keys(:enter)
+      }
+    ]
+
+    strategies.each_with_index do |try, idx|
+      begin
+        try.call
+      rescue StandardError
+        next
+      end
+      sleep 0.4
+      if handle.attribute('aria-expanded') == 'true'
+        log "    (select opened via strategy #{idx + 1})" if idx.positive?
+        return true
+      end
+    end
+    log '    WARNING: select did not open via any strategy'
+    false
   end
 
   # ── UI primitives: literal values ────────────────────────────
@@ -359,30 +585,73 @@ class WfBrowser
 
     case type
     when 'Z6092', 'Z6091' # Wikidata property or item reference
-      input = el.find_element(css: [
+      # Scope to the value sub-slot (-Z6092K1 / -Z6091K1). The slot's
+      # top-level contains a Z1K1 type-marker display with its own input;
+      # filling that instead of the value field is what was stuffing
+      # "P5137" into the "type" row.
+      value_slot = @driver.find_elements(id: "#{keypath}-#{type}K1").first || el
+      input = value_slot.find_elements(css: [
         '[data-testid="wikidata-entity-selector"] input.cdx-text-input__input',
         'input.cdx-text-input__input'
-      ].join(', '))
+      ].join(', ')).find { |i| i.displayed? rescue false }
+      unless input
+        raise "fill_literal (#{type}): no visible input in #{keypath}-#{type}K1"
+      end
+
       scroll_to(input)
       short_pause
-      input.clear
-      input.send_keys(value)
-      pause
-      input.send_keys(:arrow_down)
+
+      # ActionChains drives real browser-level pointer+keyboard events,
+      # avoiding Selenium's interactability check on Codex inputs.
+      @driver.action.move_to(input).click.perform
       short_pause
-      input.send_keys(:return)
+      @driver.action.send_keys(value).perform
+      short_pause
+
+      # If an autocomplete dropdown opens, pick the match; if not, the raw
+      # P/Q-number in the input is resolved by Wikifunctions at publish
+      # time. Don't raise if no menu appears — empty is valid here.
+      begin
+        matched = nil
+        slow_wait(timeout: 3, tag: "literal-#{value}") do
+          matched = @driver.find_elements(css: '.cdx-menu-item').find do |i|
+            (i.text.to_s.include?(value) rescue false)
+          end
+          matched
+        end
+        if matched
+          log "    matched menu item: #{matched.text.to_s.strip[0, 80].inspect}"
+          scroll_to(matched)
+          begin
+            matched.click
+          rescue StandardError
+            @driver.execute_script('arguments[0].click()', matched)
+          end
+        end
+      rescue Selenium::WebDriver::Error::TimeoutError
+        log "    (no autocomplete dropdown — leaving raw value in the field)"
+      end
 
     when 'Z6', 'Z16683', 'Z13518' # String, Integer, Natural Number
-      input = el.find_element(css: '[data-testid="text-input"], input.cdx-text-input__input, input[type="number"], input')
-      input.clear
+      input = el.find_elements(css: '[data-testid="text-input"], input.cdx-text-input__input, input[type="number"], input')
+                .find { |i| i.displayed? rescue false }
+      raise "fill_literal (#{type}): no visible input in #{keypath}" unless input
+
+      input.send_keys([:control, 'a'])
+      input.send_keys(:backspace)
       input.send_keys(value)
 
     else
       log "    WARNING: unknown literal type #{type} -- trying text input"
       begin
-        input = el.find_element(css: 'input')
-        input.clear
-        input.send_keys(value)
+        input = el.find_elements(css: 'input').find { |i| i.displayed? rescue false }
+        if input
+          input.send_keys([:control, 'a'])
+          input.send_keys(:backspace)
+          input.send_keys(value)
+        else
+          log '    Could not find a visible input. Set this value manually.'
+        end
       rescue Selenium::WebDriver::Error::NoSuchElementError
         log '    Could not find an input. Set this value manually.'
       end
@@ -424,6 +693,95 @@ class WfBrowser
   end
 
   # ── Helpers ──────────────────────────────────────────────────
+
+  # Raises if another browser is still running with this profile.
+  # Chrome's SingletonLock and Firefox's `lock` are symlinks whose target
+  # encodes the owning PID; if the PID is alive, launching a second instance
+  # would corrupt session state (this is how we lost the login earlier).
+  def ensure_profile_free!
+    pid = owning_pid
+    return unless pid
+
+    raise "#{@browser.to_s.capitalize} is already running with this profile " \
+          "(PID #{pid}).\n" \
+          "  Profile: #{PROFILE_DIR}\n" \
+          "Close the browser window or `kill #{pid}`, then retry."
+  end
+
+  def owning_pid
+    case @browser
+    when :chrome  then chrome_owning_pid
+    when :firefox then firefox_owning_pid
+    end
+  end
+
+  def chrome_owning_pid
+    # SingletonLock is a symlink pointing to "<hostname>-<pid>".
+    link = File.join(PROFILE_DIR, 'SingletonLock')
+    return nil unless File.symlink?(link)
+
+    target = File.readlink(link) rescue nil
+    pid = target&.rpartition('-')&.last.to_i
+    process_alive?(pid) ? pid : nil
+  end
+
+  def firefox_owning_pid
+    # Firefox's `lock` symlink target is "<ip>:+<pid>" on Linux.
+    link = File.join(PROFILE_DIR, 'lock')
+    return nil unless File.symlink?(link)
+
+    target = File.readlink(link) rescue nil
+    pid = target&.rpartition('+')&.last.to_i
+    process_alive?(pid) ? pid : nil
+  end
+
+  def process_alive?(pid)
+    return false if pid.nil? || pid <= 0
+
+    Process.kill(0, pid)
+    true
+  rescue Errno::ESRCH
+    false
+  rescue Errno::EPERM
+    # PID exists but we don't own it — still treat as live (not ours to steal).
+    true
+  end
+
+  # Like Wait.until but snaps a screenshot if we end up waiting past
+  # `slow_after` seconds — which in practice means something went sideways,
+  # because the happy-path steps all complete in well under a second. We
+  # cap at 10s by default: if a step hasn't succeeded by then, bail with a
+  # screenshot rather than letting a broken UI path stall the whole run.
+  def slow_wait(timeout: 10, slow_after: 4, tag: 'wait', interval: 0.5)
+    start = Time.now
+    shot = false
+    loop do
+      result = yield
+      return result if result
+
+      elapsed = Time.now - start
+      if !shot && elapsed > slow_after
+        save_debug_screenshot(tag)
+        shot = true
+      end
+      if elapsed > timeout
+        save_debug_screenshot("#{tag}-final") unless shot
+        raise Selenium::WebDriver::Error::TimeoutError,
+              "slow_wait timed out after #{timeout}s: #{tag}"
+      end
+      sleep interval
+    end
+  end
+
+  def save_debug_screenshot(tag)
+    ts = Time.now.strftime('%H%M%S')
+    safe_tag = tag.to_s.gsub(/[^A-Za-z0-9_-]/, '_')
+    path = "/tmp/wf-stuck-#{safe_tag}-#{ts}.png"
+    @driver.save_screenshot(path)
+    log "  screenshot: #{path}"
+  rescue StandardError => e
+    log "  (screenshot failed: #{e.message})"
+  end
 
   def poll_until(timeout:, interval:, waiting_for: 'condition')
     deadline = Time.now + timeout
@@ -470,7 +828,7 @@ class WfBrowser
   end
 
   def wait_for_mw_config
-    @wait.until do
+    slow_wait(tag: 'mw-config-load') do
       @driver.execute_script(
         'return typeof mw !== "undefined" && typeof mw.config !== "undefined"'
       )

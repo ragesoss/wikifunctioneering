@@ -41,7 +41,7 @@ class WfTaskFunction
     @wf.navigate_to(url)
 
     @wf.log '  Waiting for page to load...'
-    Selenium::WebDriver::Wait.new(timeout: 30).until { @wf.safe_find('[data-testid="function-editor-definition"]') }
+    @wf.slow_wait(tag: 'function-editor-page-load') { @wf.safe_find('[data-testid="function-editor-definition"]') }
     @wf.log '  Page ready.'
     @wf.pause
   end
@@ -81,17 +81,19 @@ class WfTaskFunction
       @wf.step "Setting input #{i + 1}: #{input_spec['label']} (#{input_spec['type']})"
 
       # The page starts with one empty input slot. For additional inputs,
-      # click the "Add input" button.
+      # click the "Add another input" button. Filter by text because the
+      # button has no testid and the inputs container also holds per-slot
+      # "Remove input" buttons.
       if i > 0
-        add_btn = @wf.driver.find_elements(css: '[data-testid="function-editor-inputs"] button, .ext-wikilambda-app-function-editor-inputs__add-input-button')
-                       .find(&:displayed?)
+        add_btn = @wf.driver.find_elements(css: '[data-testid="function-editor-inputs"] button')
+                       .find { |b| (b.displayed? rescue false) && b.text.strip.match?(/^Add/i) }
         if add_btn
           @wf.scroll_to(add_btn)
           @wf.short_pause
           add_btn.click
           @wf.pause
         else
-          @wf.log "    WARNING: could not find 'Add input' button."
+          @wf.log "    WARNING: could not find 'Add another input' button."
         end
       end
 

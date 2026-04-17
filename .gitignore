@@ -5,3 +5,4 @@ docs/exemplar-items.md
 .ruby-lsp/
 __pycache__/
 *.pyc
+cache/

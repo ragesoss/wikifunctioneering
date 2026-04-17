@@ -29,7 +29,7 @@ Every ZObject has a `Z1K1` key specifying its type. The types you'll encounter m
 | Z16683 | Integer | Signed: Z16683K1=sign (Z16659), Z16683K2=absolute value (Z13518 natural number) |
 | Z13518 | Natural number | Z13518K1=digit string (e.g. "42") |
 | Z20838 | Float64 | IEEE 754: Z20838K1=sign, Z20838K2=exponent (Integer), Z20838K3=significand (Natural number), Z20838K4=special value |
-| Z16659 | Sign | Z16660=positive, Z16661=negative |
+| Z16659 | Sign | Z16660=positive, Z16661=neutral (zero), Z16662=negative |
 | Z881 | Typed List | Generic: `{"Z1K1": "Z7", "Z7K1": "Z881", "Z881K1": "Z6"}` = List of Strings |
 
 ### Wikidata types
@@ -112,7 +112,7 @@ In ZObject JSON, this becomes nested Z7 calls where each argument is either a Z1
 ```json
 {
   "Z1K1": "Z16683",
-  "Z16683K1": {"Z1K1": "Z16659", "Z16659K1": "Z16660"},  // positive sign
+  "Z16683K1": {"Z1K1": "Z16659", "Z16659K1": "Z16660"},  // positive sign (Z16661 neutral, Z16662 negative)
   "Z16683K2": {"Z1K1": "Z13518", "Z13518K1": "12"}        // absolute value
 }
 ```

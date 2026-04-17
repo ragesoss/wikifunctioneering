@@ -87,11 +87,17 @@ This composes three things:
 5. **Naming convention**: descriptive names, implementations named by what they do (e.g. "440 times the frequency ratio")
 
 ### What Claude could discover via scripts
-- `wikifunctions_search.py --search "multiply" --type Z8` → finds Z21032
-- `wikifunctions_search.py --search "exponent" --type Z8` → finds Z21028
-- `wikifunctions_search.py --search "divide" --type Z8` → finds Z21033
-- `wikifunctions_search.py --search "integer to float" --type Z8` → finds Z20937
-- `wikifunctions_search.py --search "add integer" --type Z8` → finds Z16693
+
+Against the local cache (preferred — also supports input/output type filters
+and reverse-dependency search):
+- `cache_query.py functions --label multiply` → Z21032 (and sibling arithmetic)
+- `cache_query.py functions --input Z20838 --output Z20838 --label "exponent"` → Z21028
+- `cache_query.py functions --input Z20838 --output Z20838 --label divide` → Z21033
+- `cache_query.py functions --input Z16683 --output Z20838` → Z20937 (integer to float64)
+- `cache_query.py functions --input Z16683 --output Z16683 --label add` → Z16693
+
+Live fallback for very recent edits:
+- `wikifunctions_search.py --search "multiply" --type Z8`
 
 ### What Claude would need in reference docs
 - The type system: what Z6, Z16683, Z20838 are and when to use them

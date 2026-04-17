@@ -1,6 +1,14 @@
 # Existing Building Block Functions
 
-Key reusable functions already on Wikifunctions. Search for more with:
+Key reusable functions already on Wikifunctions. Search for more via the
+local cache (fastest for signature / reverse-dependency queries):
+```bash
+python scripts/cache_query.py functions --label "term"
+python scripts/cache_query.py functions --input Z6007 --output Z6092
+python scripts/cache_query.py references Z866 --type Z14
+```
+Fall back to the live label-search API only when the cache might be
+stale (edits in the last few minutes):
 ```bash
 python scripts/wikifunctions_search.py --search "term" --type Z8
 ```
@@ -194,3 +202,10 @@ When claim values and qualifier values come back as Z1 (generic), these function
 | Z33603 | reference frequency of pitch standard | pitch standard: Z6001 → Float64 | Extracts reference frequency in Hz via Z25218 → Z25294 → Z20854 |
 | Z33605 | frequency of pitch in 12-TET standard | pitch class: String, octave: Integer, pitch standard: Z6001 → Float64 | Top-level: ref_freq × 2^((input_midi − ref_midi) / 12) |
 | Z33606 | MIDI number of reference note | pitch standard: Z6001 → Integer | Helper: MIDI of a pitch standard's reference note |
+| Z33682 | frequency of MIDI note number | midi note number: Integer, pitch standard: Z6001 → Float64 | Same formula as Z33605, with MIDI provided directly instead of pitch-class + octave |
+
+## Lexemes / Wikidata-grounded text (user-created)
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z33668 | word for concept | concept: Z6091, language: Z60, lexical category: Z6091 → String | Looks up the best-ranked lexeme whose `item for this sense` (P5137) points at the concept, and returns its lemma. Wraps Z33071 + Z21806.

@@ -17,13 +17,29 @@ When the user describes a function they want to create, follow this workflow. Th
 - Map out what data exists and what relationships connect it
 
 ### 2. Search for building blocks
-- Find existing functions that could be reused:
+
+**Reach for the local cache first** (`cache/`, built by
+`scripts/wikifunctions_cache.py --full` and refreshable with
+`--incremental`). It indexes all Z4/Z8/Z14/Z20 on-wiki and supports
+signature and reverse-dependency queries the label-search API can't:
+  ```bash
+  python scripts/cache_query.py functions --output Z40             # all boolean-returning functions
+  python scripts/cache_query.py functions --input Z6010 --output Z20838   # find type conversions
+  python scripts/cache_query.py functions --label "lexeme"
+  python scripts/cache_query.py references Z866 --type Z14         # every impl that uses Z866
+  python scripts/cache_query.py impls Z26184                       # connected implementations
+  python scripts/cache_query.py testers Z26184                     # connected testers
+  python scripts/cache_query.py show Z26184                        # full cached ZObject
+  ```
+
+Fall back to the live label-search API only when you need very fresh
+data (edits made in the last few minutes, since the last cache
+refresh):
   ```bash
   python scripts/wikifunctions_search.py --search "multiply" --type Z8
-  python scripts/wikifunctions_search.py --search "" --output-type Z40  # boolean-returning functions
-  python scripts/wikifunctions_search.py --input-types Z6010 --output-type Z20838  # find type conversions
   ```
-- Understand how existing functions work:
+
+Understand how existing functions work:
   ```bash
   python scripts/wikifunctions_fetch.py --zid Z25217                    # human-readable summary
   python scripts/wikifunctions_fetch.py --zid Z25217 --implementations  # show composition structure
@@ -102,16 +118,20 @@ Iterate on the composition tree until all test cases produce correct results. On
 ### 8. Build via browser automation
 When the composition is validated, use the browser automation toolkit to build it:
 ```bash
-ruby scripts/wf.rb zobjects/my_function.func.json    # create function shell
-ruby scripts/wf.rb zobjects/my_function.comp.json    # add composition implementation
+ruby scripts/wf.rb zobjects/my_function.func.json          # create function shell
+ruby scripts/wf.rb zobjects/my_function.comp.json          # add / edit composition
+ruby scripts/wf.rb zobjects/my_function_test.tester.json   # add / edit tester
 ```
 
 The toolkit (`scripts/wf.rb`) dispatches to task-specific handlers:
-- `scripts/wf_browser.rb` — browser primitives (launch, login, DOM interaction)
-- `scripts/wf_task_composition.rb` — create/edit compositions
-- `scripts/wf_task_function.rb` — create function shells
+- `scripts/wf_browser.rb` — browser primitives and UI helpers
+- `scripts/wf_task_function.rb` — function shell creation
+- `scripts/wf_task_composition.rb` — compositions (create / edit)
+- `scripts/wf_task_tester.rb` — testers (create / edit)
+- `scripts/wf_composition_builder.rb` — shared `build_function_call` /
+  `fill_argument` mixin used by the composition and tester tasks
 
-**JSON spec format** for compositions:
+**Composition spec format:**
 ```json
 {
   "function_zid": "Z33605",
@@ -133,8 +153,7 @@ The toolkit (`scripts/wf.rb`) dispatches to task-specific handlers:
 
 Node types: `{"call": "Z#", "args": {...}}`, `{"ref": "arg_name"}`, `{"literal": "P361", "type": "Z6092"}`.
 The `"name"` and `"label"` fields are optional human-readable annotations.
-
-Use `"implementation_zid"` to edit an existing implementation instead of creating a new one.
+Add `"implementation_zid": "Z####"` to edit an existing implementation.
 
 **Function shell spec format:**
 ```json
@@ -148,14 +167,57 @@ Use `"implementation_zid"` to edit an existing implementation instead of creatin
 }
 ```
 
-**Browser automation notes:**
-- Uses a persistent Chrome profile (`.browser-profile/`) so login survives between runs
-- Codex Vue components don't expose `data-value` DOM attributes — use keyboard navigation (ArrowDown + Enter) for all lookups and selects
-- Type ZIDs, not function names, into lookup fields
-- The UI may pre-select functions based on type compatibility — the script detects this and skips redundant selections
-- Function labels must be under ~50 characters
-- After successful publish, the script verifies via API and exits cleanly
-- To inspect DOM for new page types, write a diagnostic script (see `scripts/inspect_create_function.rb` pattern)
+**Tester spec format** — `function_zid` creates a new tester, `tester_zid` edits one.
+`test_call` fills Z20K2, `validator` fills Z20K3; either can be omitted to leave it
+unchanged on edit. For Z20838 expected-value / tolerance fields, wrap a Z6 string
+with **Z20915 "string to float64"** rather than filling the IEEE-754 substructure
+by hand:
+```json
+{
+  "task": "tester",
+  "function_zid": "Z33682",
+  "label": "MIDI 69 in A440 -> 440 Hz",
+  "test_call": {
+    "call": "Z33682",
+    "args": {
+      "Z33682K1": {"literal": "69", "type": "Z16683"},
+      "Z33682K2": {"call": "Z6821",
+                   "args": {"Z6821K1": {"literal": "Q2610210", "type": "Z6091"}}}
+    }
+  },
+  "validator": {
+    "call": "Z31090",
+    "args": {
+      "Z31090K2": {"call": "Z20915",
+                   "args": {"Z20915K1": {"literal": "440.0", "type": "Z6"}}},
+      "Z31090K3": {"call": "Z20915",
+                   "args": {"Z20915K1": {"literal": "0.001", "type": "Z6"}}}
+    }
+  }
+}
+```
+
+**After publishing: wait for the "connected" toggle.** New Z14
+implementations and new Z20 testers land *disconnected* — absent from
+`Z8K4`/`Z8K3`, so the runtime returns `Z503`. The toolkit blocks after
+publish until the user toggles them connected on the function page
+(up to 24h). Don't report a task as done until that completes.
+
+**Operational notes:**
+- Persistent Chrome profile at `.browser-profile/` keeps you logged in
+  between runs. The launch-time guard refuses to start a second Chrome
+  on the same profile — kill the stale one, don't delete the lock file
+  by hand.
+- Every UI step is capped at 10s with an auto-screenshot at 4s
+  (`slow_wait`). Timeouts raise; do not paper over them by bumping
+  limits.
+- On failure the browser takes one final screenshot, quits, and the
+  script exits. Screenshots land at `/tmp/wf-stuck-<tag>-<time>.png`.
+- Function labels must be under ~50 characters.
+- For Codex UI gotchas (pre-populated slots, menu-item matching,
+  collapsed-by-default, etc.) read
+  `docs/browser-automation-strategies.md` before modifying
+  `wf_browser.rb`.
 
 ### 9. Composition design principles
 When designing compositions with many levels:
@@ -172,8 +234,9 @@ Read these docs for detailed knowledge:
 - `docs/existing-building-blocks.md` — Catalog of key reusable functions (including type casting, qualifier extraction, and pitch standard pipeline)
 - `docs/worked-examples.md` — Real decomposition walkthrough (pitch frequency function)
 - `docs/future-helpers.md` — Helper functions identified but not yet created
-- `docs/session-notes/` — Notes from past sessions, including what worked and what didn't
-- `zobjects/` — JSON specs for functions and compositions (`.func.json` for function shells, `.comp.json` for compositions)
+- `docs/browser-automation-strategies.md` — Durable rules for driving the Wikifunctions UI, Codex/Vue gotchas, structured literal handling
+- `docs/session-notes/` — Dated notes from past sessions, including what worked and what didn't
+- `zobjects/` — JSON specs for functions, compositions, and testers (`.func.json`, `.comp.json`, `.tester.json`)
 
 ## Key concepts to remember
 

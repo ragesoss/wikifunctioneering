@@ -236,6 +236,7 @@ Read these docs for detailed knowledge:
 - `docs/future-helpers.md` — Helper functions identified but not yet created
 - `docs/browser-automation-strategies.md` — Durable rules for driving the Wikifunctions UI, Codex/Vue gotchas, structured literal handling
 - `docs/wikimedia-contribution.md` — How to submit platform-side changes (function-orchestrator / function-schemata MRs, Phab tasks, paired-submodule flow)
+- `docs/wikidata-edit-proposals.md` — Conversational workflow for proposing and applying Wikidata edits (new Q-items, lexeme senses, P5137 links). Uses `scripts/wd_propose.py` + `scripts/wd_apply.py`; proposals live in `proposals/` (session-local, gitignored).
 - `docs/session-notes/` — Dated notes from past sessions, including what worked and what didn't
 - `zobjects/` — JSON specs for functions, compositions, and testers (`.func.json`, `.comp.json`, `.tester.json`)
 

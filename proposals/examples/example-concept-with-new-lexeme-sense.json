@@ -1,0 +1,92 @@
+{
+  "slug": "cancel-ui-concept",
+  "kind": "new_concept_item_with_dedicated_sense",
+  "status": "posted",
+  "rationale": "Create the Wikidata concept item for 'cancel' in the UI-action sense, AND add a dedicated 'software feature' sense on the English verb lexeme L13009, linked to the new concept via P5137. Follows the exact precedent set by Q42282254 'copy', Q42282222 'cut', Q42282161 'find' — each of their English lexemes has a dedicated sense glossed 'software feature' that hosts the P5137 link, separate from the broader semantic sense of the verb. L13009-S1 ('to cause something to no longer have effect') was initially considered as the link target, but is too broad — it covers contract cancellation, event unscheduling, revocation, etc. Adding a dedicated sense is the cleaner lexicographic model. Once this lands, lexemes for 'cancel' in other languages can do the same (each adds a 'software feature' sense linked to the same concept), unblocking Z33668 multilingual lookups for zblocks and other dogfood tools. First per-word concept item to land under the new umbrella Q139480165 'user interface command'.",
+  "probes": {
+    "related_precedents": [
+      "Q42282254",
+      "Q42282222",
+      "Q42282161",
+      "Q139480165"
+    ]
+  },
+  "ops": [
+    {
+      "op": "create_item",
+      "placeholder_id": "NEW_CANCEL",
+      "labels": {
+        "en": "cancel"
+      },
+      "descriptions": {
+        "en": "user-interface command to cancel or abandon an initiated or pending action"
+      },
+      "claims": [
+        {
+          "property": "P31",
+          "value": "Q139480165"
+        }
+      ]
+    },
+    {
+      "op": "add_sense",
+      "lexeme": "L13009",
+      "placeholder_id": "NEW_CANCEL_SENSE",
+      "glosses": {
+        "en": "software feature"
+      }
+    },
+    {
+      "op": "add_claim",
+      "entity": "{NEW_CANCEL_SENSE}",
+      "property": "P5137",
+      "value": "{NEW_CANCEL}"
+    }
+  ],
+  "open_questions": [
+    "Gloss text for the new sense: 'software feature' exactly matches the Q42282XXX family precedent. 'user-interface command' would be more specific and aligns with our umbrella label. Leaning: 'software feature' (precedent > specificity).",
+    "Do we also need P31 Q4485156 'software feature' directly on the new cancel Q-item, matching the Q42282XXX family pattern? Leaning: inheritance via umbrella's P279 is enough."
+  ],
+  "related_followups": [
+    {
+      "summary": "Consider adding P5137 → cancel Q on L13009-S1 and/or S3 too",
+      "entities": [
+        "L13009-S1",
+        "L13009-S3"
+      ],
+      "notes": "S1 and S3 have broad cancellation meanings that partially overlap with the UI sense. Since P5137 allows multiple values per sense, we could add our cancel Q as one of them — but S1/S3 deserve their own proper Q-item targets (contract cancellation, event cancellation, etc.) first. Hold for now."
+    },
+    {
+      "summary": "Link equivalent senses in other-language lexemes",
+      "entities": [],
+      "notes": "Once the cancel Q exists, lexemes like German 'abbrechen', French 'annuler', Swedish 'avbryta', Spanish 'cancelar' can add their own 'software feature' sense with P5137 pointing at the same concept. One small proposal per language, batchable. Discoverable via wd_senses.py per lemma."
+    }
+  ],
+  "posted": {
+    "posted_at": "2026-04-19T20:17:36+00:00",
+    "ops": [
+      {
+        "op": "create_item",
+        "placeholder": "NEW_CANCEL",
+        "result_qid": "Q139480774"
+      },
+      {
+        "op": "add_sense",
+        "lexeme": "L13009",
+        "placeholder": "NEW_CANCEL_SENSE",
+        "result_sense_id": "L13009-S4"
+      },
+      {
+        "op": "add_claim",
+        "entity": "L13009-S4",
+        "property": "P5137",
+        "value": "Q139480774",
+        "claim_id": "L13009-S4$71520FEE-4E78-4DAA-B680-03E447B7BB0B"
+      }
+    ],
+    "placeholder_env": {
+      "NEW_CANCEL": "Q139480774",
+      "NEW_CANCEL_SENSE": "L13009-S4"
+    }
+  }
+}

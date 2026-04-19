@@ -1,0 +1,22 @@
+{
+  "slug": "investigate-command-sources-of-law",
+  "kind": "investigate",
+  "status": "backlog",
+  "rationale": "While reviewing the umbrella-ui-command proposal we walked up the P279 chain from Q1079196 'command' and found: Q1079196 'command' (directive to a computer program) is a subclass of Q1665268 'command' (generic command), which in turn is a subclass of Q846882 'sources of law' (legal philosophy concept). So every subclass of Q1079196 \u2014 shell commands, UI commands, compiler directives, AI prompts \u2014 transitively inherits 'source of law'. This is semantically odd and not intentional. It affects the entire 41-item subclass tree under Q1079196 plus anything we'd add under our umbrella. Worth investigating whether this is a Wikidata modeling mistake (e.g. Q1079196 should be parented on something else, or Q1665268 should not link to 'sources of law'), or whether the 'sources of law' classification reflects John Austin's legal-philosophy sense of 'command' that's orthogonal to our software sense and should be split.",
+  "entities_of_interest": [
+    "Q1079196",
+    "Q1665268",
+    "Q846882",
+    "Q12772763"
+  ],
+  "probes": {
+    "walk_up_levels": 3
+  },
+  "open_questions": [
+    "Is Q1665268 genuinely the same concept as Q1079196, or are they homographs that got merged/linked incorrectly?",
+    "What should Q1079196 'command (computing)' actually be a subclass of? (Candidates: Q12772763 'instruction', Q1964636 'action', Q1914636 'activity'.)",
+    "Does the Wikidata community have an existing discussion or ticket about this?",
+    "If we re-parent Q1079196, how many downstream items are affected?"
+  ],
+  "ops": []
+}

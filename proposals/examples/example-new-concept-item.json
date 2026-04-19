@@ -1,0 +1,120 @@
+{
+  "slug": "umbrella-ui-command",
+  "kind": "new_concept_item",
+  "rationale": "Wikidata has no umbrella concept for user-interface commands (cancel, close, save, run, pin, etc.), so lexeme senses for these words either link to unrelated Q-items or have no P5137 at all. After deeper investigation (see probes below), the right classification is a dual P279: subclass of Q4485156 'software feature' (the real established class — 300 items are P31 of it, including Q42282254 'copy', Q42282222 'cut', Q42282161 'find', and Q513420 'Undo') AND subclass of Q1079196 'command' (honest about it also being a command class). Initially considered adding Q47146 'user interface' as a third parent (following the Q1058748 'cut, copy, and paste' precedent), but dropped because Q47146 is too broad — its direct subclasses include steering wheels, handlebars, and pedal drives. This umbrella is specifically for software UI commands. First in a series of related edits supporting multilingual Z33668 lookups on Wikifunctions.",
+  "status": "posted",
+  "probes": {
+    "related_lemmas": [
+      "undo",
+      "cut",
+      "copy",
+      "paste",
+      "save",
+      "close",
+      "cancel",
+      "search",
+      "find"
+    ],
+    "related_precedents": [
+      "Q513420",
+      "Q1058748",
+      "Q3980110",
+      "Q66018493",
+      "Q11540953",
+      "Q42282254",
+      "Q42282222",
+      "Q42282161"
+    ],
+    "walk_up_levels": 2
+  },
+  "ops": [
+    {
+      "op": "create_item",
+      "placeholder_id": "NEW_UI_CMD_UMBRELLA",
+      "labels": {
+        "en": "user interface command"
+      },
+      "descriptions": {
+        "en": "command issued by a user through a software user interface — e.g. clicking \"allow\""
+      },
+      "aliases": {
+        "en": [
+          "UI command",
+          "user-interface command",
+          "GUI command"
+        ]
+      },
+      "claims": [
+        {
+          "property": "P279",
+          "value": "Q4485156"
+        },
+        {
+          "property": "P279",
+          "value": "Q1079196"
+        }
+      ]
+    }
+  ],
+  "open_questions": [
+    "Should we ALSO add P279 Q47146 'user interface' to match the Q1058748 precedent? Current lean: no, Q47146 is too broad (includes physical controls). Decision recorded; revisit if a maintainer pushes back.",
+    "Should the umbrella also carry a P31 claim (e.g. P31 Q16889133 'class' or P31 Q17537576 'category of things')? Current ops don't include one; checking ~44 direct subclasses of Q4485156 showed most don't have a P31 beyond inheritance.",
+    "Are there existing items under Q1079196 or Q4485156 that should be RECLASSIFIED as P31 of our new umbrella (rather than just living at the same level)? See related_followups."
+  ],
+  "related_followups": [
+    {
+      "summary": "Reclassify Q42282XXX 'software feature' family as P31 of new umbrella",
+      "entities": [
+        "Q42282254",
+        "Q42282222",
+        "Q42282161"
+      ],
+      "notes": "Q42282254 'copy', Q42282222 'cut', Q42282161 'find' — currently only P31 Q4485156. After umbrella lands, these would naturally be P31 of it too (they ARE UI commands), which gives Z33668 lookups on the UI-command sense a cleaner path. One edit per item."
+    },
+    {
+      "summary": "Reclassify Q513420 'Undo' as P31 of new umbrella",
+      "entities": [
+        "Q513420"
+      ],
+      "notes": "Currently P31 Q4485156 + P279 Q1079196. Could be re-expressed as P31 of our umbrella (which itself is P279 of both those classes). Simplifies the classification and matches the pattern set by the Q42282XXX family."
+    },
+    {
+      "summary": "Consider adding P31 of new umbrella to Q1058748 / Q3980110 / Q66018493",
+      "entities": [
+        "Q1058748",
+        "Q3980110",
+        "Q66018493"
+      ],
+      "notes": "These already have multiple P279 parents including Q1079196 'command' and Q47146 'user interface'. Adding P31 of our umbrella would make them formally instances of the UI-command class without removing their existing relationships."
+    },
+    {
+      "summary": "Fix the Q1079196 'command' → Q846882 'sources of law' upchain",
+      "entities": [
+        "Q1079196",
+        "Q1665268",
+        "Q846882"
+      ],
+      "notes": "Not specific to our umbrella, but our new item will inherit this quirky upchain too. Already captured as a separate backlog proposal: investigate-command-sources-of-law."
+    },
+    {
+      "summary": "zblocks 'save' mapping may be wrong",
+      "entities": [
+        "Q3305941"
+      ],
+      "notes": "zblocks/i18n/mappings.json uses Q3305941 as the concept for 'save'. But Q3305941 is 'save' in the goalkeeper/soccer sense (an act of a goaltender stopping the ball). This generates incorrect Z33668 lookups. Once our umbrella lands, a 'save (software feature)' Q-item should be created (analogous to Q42282254 'copy') and zblocks mappings updated."
+    }
+  ],
+  "posted": {
+    "posted_at": "2026-04-19T19:58:27+00:00",
+    "ops": [
+      {
+        "op": "create_item",
+        "placeholder": "NEW_UI_CMD_UMBRELLA",
+        "result_qid": "Q139480165"
+      }
+    ],
+    "placeholder_env": {
+      "NEW_UI_CMD_UMBRELLA": "Q139480165"
+    }
+  }
+}

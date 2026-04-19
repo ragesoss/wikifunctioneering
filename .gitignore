@@ -7,3 +7,10 @@ __pycache__/
 *.pyc
 cache/
 upstream/
+
+# In-progress proposal files are session-local working artifacts;
+# only the curated examples/ and the README are checked in.
+proposals/*
+!proposals/examples/
+!proposals/examples/**
+!proposals/README.md

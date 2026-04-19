@@ -43,6 +43,36 @@ A **proposal** is a JSON file at `proposals/<slug>.json`:
 Every field except `slug` and `ops` is optional. Status progresses
 `draft → posted` automatically when `wd_apply.py --apply` succeeds.
 
+## Before proposing a new Q-item: don't duplicate
+
+Concept items on Wikidata are frequently labelled as **gerunds or
+abstract nouns**, not as the verb form you'd reach for. The concept
+behind software "save" is [Q66018493 "file saving"](https://www.wikidata.org/wiki/Q66018493)
+— with "save" as an alias. The concept behind "copy" (the UI action)
+is Q42282254 "copy" — a noun-form item that happens to share its
+label with the verb. Before drafting a `create_item`:
+
+- **Always check `wbsearchentities` with the proposed label.**
+  `wd_propose` does this automatically for any `create_item` op, at a
+  generous limit, and tags alias matches `[alias]` so they stand out.
+  If a match comes back labelled with a gerund (`-ing`, `-tion`,
+  `-ment`) or abstract-noun form of your verb, investigate that item
+  first — it's probably the concept you want to link to.
+- **Check if the concept is the gerund form of your verb.** "save" →
+  "saving"; "edit" → "editing"; "delete" → "deletion." The Wikidata
+  community often uses these forms as the canonical label even when
+  multiple lexemes (verb + noun + gerund) could plausibly host the
+  sense.
+- **Inspect the candidate.** If its P31/P279 classification is at
+  least sane (subclass of "command" / "software feature" / "user
+  interface command"), and its description matches the sense you want
+  to link, just use it. Creating a second item for the same concept
+  is worse than an imperfect classification on the existing one.
+
+Most `create_item` proposals that start with "we need a new Q-item
+for X" end up being `add_sense` + `add_claim` to an existing Q once
+the alias check runs.
+
 ## Workflow
 
 1. **Draft** `proposals/<slug>.json` by copying one of the templates in

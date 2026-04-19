@@ -130,7 +130,7 @@ def ensure_labels(ents: dict, ids) -> None:
     Mutates ents. Safe to call with a mix of already-present and new ids."""
     missing = {i for i in ids if i and i not in ents}
     if missing:
-        ents.update(wbgetentities(sorted(missing), props="labels|descriptions|claims"))
+        ents.update(wbgetentities(sorted(missing), props="labels|descriptions|aliases|claims"))
 
 
 # ------------------------- Common SPARQL probes -------------------------

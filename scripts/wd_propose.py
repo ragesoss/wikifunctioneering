@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 from wd_common import (
-    Style, wbgetentities, wbsearchentities, label_of, desc_of,
+    Style, wbgetentities, wbsearchentities, sparql, label_of, desc_of,
     claims_of, fmt_ref, sparql_id, ensure_labels,
     backlink_count, pattern_count, pattern_matches, direct_subclasses,
     senses_for_lemma, sample_p5137_backlinks, parent_chain,
@@ -57,6 +57,43 @@ def load_proposal(arg: str) -> tuple[dict, Path]:
 
 
 # ------------------------- Context rendering -------------------------
+
+def _exact_label_or_alias_matches(label: str, limit: int = 10) -> list[str]:
+    """Items whose English label OR alias is exactly `label`, filtered
+    for noise (templates, names, scholarly articles, etc.). Uses the
+    filter from wd_search so we don't duplicate the noise list."""
+    from wd_search import NOISE_P31
+    safe = label.replace('"', '\\"')
+    noise_values = " ".join(f"wd:{q}" for q in NOISE_P31)
+    q = f"""
+    SELECT DISTINCT ?i WHERE {{
+      {{ ?i rdfs:label "{safe}"@en . }}
+      UNION
+      {{ ?i skos:altLabel "{safe}"@en . }}
+      FILTER(STRSTARTS(STR(?i), "http://www.wikidata.org/entity/Q"))
+      FILTER NOT EXISTS {{
+        VALUES ?noise {{ {noise_values} }}
+        ?i wdt:P31 ?noise .
+      }}
+    }} LIMIT {limit}
+    """
+    try:
+        rows = sparql(q)
+    except Exception:
+        return []
+    return [sparql_id(r["i"]) for r in rows]
+
+
+def _match_kind(ents: dict, qid: str, label: str) -> str:
+    """Is `label` the entity's English label, or an alias?"""
+    e = ents.get(qid, {})
+    if e.get("labels", {}).get("en", {}).get("value", "").lower() == label.lower():
+        return "label"
+    for a in e.get("aliases", {}).get("en", []):
+        if a.get("value", "").lower() == label.lower():
+            return "alias"
+    return "match"
+
 
 def context_for_create_item(op: dict, ents: dict, st: Style,
                              enabled: set) -> list[str]:
@@ -117,17 +154,50 @@ def context_for_create_item(op: dict, ents: dict, st: Style,
             if cnt > len(matches):
                 out.append(f"    {st.dim(f'\u2026 and {cnt - len(matches)} more')}")
 
-    # Label namespace conflicts \u2014 single wbsearchentities call, fast enough
-    # to keep as default-on.
-    if label and "label_search" in enabled:
+    # DUPLICATE CHECK \u2014 exact-match label or alias via SPARQL, filtered
+    # for noise. This is the definitive "is there already a concept with
+    # this name?" probe. wbsearchentities alone is insufficient because
+    # its ranking favours popular entities (places, names, acronyms) and
+    # can push relevant concept items off the first page of results.
+    # One SPARQL call \u2014 fast enough to keep always-on for create_item.
+    if label:
+        exact_matches = _exact_label_or_alias_matches(label)
+        if exact_matches:
+            ensure_labels(ents, exact_matches)
+            out.append("")
+            out.append(f"  {st.bold('\u26a0 EXACT label/alias matches for')} \u201c{label}\u201d  "
+                       f"{st.red('(check before creating a new item!)')}")
+            for qid in exact_matches:
+                d = desc_of(ents, qid)[:90]
+                match_kind = _match_kind(ents, qid, label)
+                out.append(f"    {fmt_ref(qid, ents, st)}  {st.yellow(f'[{match_kind}]')}  "
+                           f"{st.dim(d)}")
+                for pid in ("P31", "P279"):
+                    vals = claims_of(ents, qid, pid)[:3]
+                    if vals:
+                        ensure_labels(ents, vals)
+                        rendered = ", ".join(fmt_ref(v, ents, st) for v in vals)
+                        out.append(f"      {fmt_ref(pid, ents, st)}: {rendered}")
+
+    # Ranked label + alias search (wbsearchentities) \u2014 complementary to
+    # the exact-match lookup above; catches fuzzy matches.
+    if label:
         out.append("")
-        out.append(f"  {st.bold('Items on Wikidata with labels similar to')} \u201c{label}\u201d:")
-        hits = wbsearchentities(label, entity_type='item', language='en', limit=6)
+        out.append(f"  {st.bold('Items on Wikidata with labels or aliases similar to')} \u201c{label}\u201d:")
+        hits = wbsearchentities(label, entity_type='item', language='en', limit=20)
         if hits:
-            for h in hits[:6]:
+            for h in hits[:15]:
                 desc = (h.get("description") or "")[:80]
-                out.append(f"    {st.cyan(h['id'])} {st.dim('\u201c')}{h.get('label','?')}{st.dim('\u201d')}  "
-                           f"{st.dim(desc)}")
+                match = h.get("match") or {}
+                kind = match.get("type", "")
+                matched_text = match.get("text", "")
+                tag = ""
+                if kind == "alias":
+                    tag = st.yellow(" [alias]")
+                elif kind == "label" and matched_text != h.get("label"):
+                    tag = st.dim(f" [match={matched_text!r}]")
+                out.append(f"    {st.cyan(h['id'])} {st.dim('\u201c')}{h.get('label','?')}{st.dim('\u201d')}"
+                           f"{tag}  {st.dim(desc)}")
         else:
             out.append(f"    {st.dim('(no results \u2014 the label namespace is clear)')}")
 
@@ -434,10 +504,9 @@ def collect_entity_ids(proposal: dict) -> set[str]:
 # ------------------------- Main -------------------------
 
 ALL_PROBES = ["pattern", "siblings", "backlinks", "lemmas", "precedents",
-              "walk_up", "label_search"]
+              "walk_up"]
 
 PROBE_DESCRIPTIONS = {
-    "label_search":    "search existing items with similar labels (1 API call)",
     "pattern":         "items matching the full P31+P279 classification pattern (SPARQL)",
     "siblings":        "existing direct subclasses of each parent (SPARQL per parent)",
     "backlinks":       "P5137 backlink count for each referenced Q-item (SPARQL each)",
@@ -445,6 +514,7 @@ PROBE_DESCRIPTIONS = {
     "precedents":      "full render of each Q in `probes.related_precedents` (SPARQL each)",
     "walk_up":         "upchain from proposed P279 parents / entities_of_interest (SPARQL)",
 }
+# Label search is NOT in ALL_PROBES \u2014 it's always-on for create_item ops.
 
 
 def parse_enabled(with_arg: str, full: bool) -> set:

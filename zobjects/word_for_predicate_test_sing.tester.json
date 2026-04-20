@@ -1,0 +1,20 @@
+{
+  "task": "tester",
+  "function_zid": "Z33775",
+  "label": "Q27939 (singing) verb en → sing",
+  "summary": "New tester: the English verb lexeme 'sing' has a sense with P9970 → Q27939 'singing' (act of producing musical sounds with the voice). Given (Q27939, Z1002, Q24905), the function should return 'sing'. Music-themed predicate, single candidate lexeme, verified fast via raw API prototype (no orchestrator timeout).",
+  "test_call": {
+    "call": "Z33775", "name": "word for predicate",
+    "args": {
+      "Z33775K1": {"label": "predicate (singing)", "literal": "Q27939", "type": "Z6091"},
+      "Z33775K2": {"label": "English", "literal": "Z1002", "type": "Z9"},
+      "Z33775K3": {"label": "verb", "literal": "Q24905", "type": "Z6091"}
+    }
+  },
+  "validator": {
+    "call": "Z866", "name": "string equality",
+    "args": {
+      "Z866K2": {"label": "expected lemma", "literal": "sing", "type": "Z6"}
+    }
+  }
+}

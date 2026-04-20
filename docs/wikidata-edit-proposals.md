@@ -68,10 +68,111 @@ label with the verb. Before drafting a `create_item`:
   interface command"), and its description matches the sense you want
   to link, just use it. Creating a second item for the same concept
   is worse than an imperfect classification on the existing one.
+- **Go beyond the exact-label match.** `wd_propose` only shows
+  label/alias matches on your proposed label. That's not enough. Also
+  search synonyms and related phrasings (`wd_search "dismiss"`,
+  `"exit"`, `"close dialog"`, etc.), and scan the existing members of
+  the classification family you're proposing under
+  (`wd_pattern --p31 Q4485156 --limit 300` then grep). The goal is to
+  be confident no fit exists before you draft `create_item` — and to
+  record in the proposal's rationale *what you searched and what you
+  ruled out*, so the reviewer can see the diligence.
+- **Watch for near-miss gerunds that aren't software-specific.**
+  A gerund-form item like Q115655908 "closing" (P279 of "action", not
+  software) is tempting but wrong as a UI-command target — adding
+  P31 of the UI-command umbrella to it would assert that physical
+  closing of doors is a UI command. A concept is only reusable if its
+  classification is already software-adjacent (compare Q66018493 "file
+  saving", which is explicitly a user operation). If the gerund isn't
+  in software territory, create a new item.
 
 Most `create_item` proposals that start with "we need a new Q-item
 for X" end up being `add_sense` + `add_claim` to an existing Q once
-the alias check runs.
+the alias check runs. But not all — when you *do* need a new item,
+rationale should explicitly list the candidates you rejected.
+
+## Verb senses vs. noun senses: shape and property
+
+**This is the single most important rule in this doc. It is actively
+enforced on-wiki.** Our first two UI-command proposals (cancel,
+close) were both reverted within hours by Mahir256 — one of the most
+prolific Wikidata lexicographical editors — for violating it.
+
+### The rule
+
+A sense's **gloss shape** and **linking property** are dictated by
+the lexeme's lexical category:
+
+| lexical category | gloss shape | link property |
+|---|---|---|
+| verb (Q24905) | **infinitive predicate** — "to X something" | **P9970** "predicate for" |
+| noun (Q1084) | noun phrase — "the act of X", "a thing that X" | **P5137** "item for this sense" |
+| adjective (Q34698) | attributive phrase | P5137 |
+
+From [Wikidata:Lexicographical_data/Documentation/Senses](https://www.wikidata.org/wiki/Wikidata:Lexicographical_data/Documentation/Senses):
+
+> **P5137 ("item for this sense"):** "This property is used to link a
+> sense representing a *substantive concept (typically on a noun or
+> adjective)* to a Wikidata item representing the concept."
+>
+> **P9970 ("predicate for"):** "This property is used to link a sense
+> representing a *predicative concept (typically on a verb or verb
+> phrase)* to a Wikidata item representing the concept. In general,
+> for some action/event/occurrence X described by an item, if a verb
+> for 'to do X' and a noun for 'X' differ in the addition of a light
+> verb, then the noun is connected to the item using P5137 and the
+> verb is connected to the same item using this property."
+
+The `wbsearchentities` community created P9970 *explicitly* so
+P5137's scope didn't need to expand (see
+[Property_talk:P5137#Use_on_Verb,_Adjective_and_Adverb_senses](https://www.wikidata.org/wiki/Property_talk:P5137)).
+Using P5137 on a verb sense is the precise thing that thread
+rejected.
+
+### Anti-examples (our own reverts)
+
+- Gloss **"software feature"** on a verb sense — wrong shape: it
+  describes a noun ("a feature"), not an action. The gloss of
+  Q42282254-family senses is widely imitated in our proposals, but
+  those senses are themselves inconsistent with the rule above and
+  may eventually be refined on-wiki.
+- Gloss **"software command to dismiss or close..."** — still wrong
+  shape ("a command that does X" = noun phrase). Correct verb shape:
+  **"to dismiss or close a window, dialog, or panel"**.
+- P5137 on a verb sense — wrong property. The correct link is
+  **P9970**.
+
+### The dogfooding conflict
+
+Wikifunctions `Z33668 "word for concept"` currently follows P5137
+only. Verb-category lookups for concepts linked via P9970 return
+empty (Z28170 "the list is empty"). When adding verb senses, you
+have two options:
+
+1. Add the sense with the correct property (P9970) and accept that
+   `Z33668` won't resolve it until Wikifunctions is updated — either
+   by modifying Z33677 to also follow P9970, or by creating a
+   parallel "verb for concept" function.
+2. If a noun lexeme for the same concept exists, add the sense there
+   with P5137 instead. Z33668 already works, and the property is
+   correct.
+
+### Gloss length (within the right shape)
+
+Once the shape is right, length is a separate question. Policy sets
+no length rule; community norm is disambiguation adequacy. Terse
+glosses work well when the linked Q-item carries the encyclopedic
+definition — e.g. a one-line verb predicate matching the style of
+surrounding senses on the lexeme. Look at the existing senses of
+the lexeme you're editing and match their voice.
+
+### Sourcing
+
+Mahir256's edits consistently add **P12510 (OED ID)** or similar
+external-ID citations to each sense they touch. Adding a sense
+without a source is not a revert trigger on its own, but expect
+more scrutiny. If the sense is drawn from a dictionary, include
+the citation.
 
 ## Workflow
 
@@ -87,6 +188,11 @@ the alias check runs.
    - Shows a **semantic diff** — entities/triples that will exist on
      Wikidata after the apply, with labels resolved.
    - Shows raw API payloads below for debugging.
+   - **Paste the semantic-diff section into the conversation** so the
+     user can approve or redirect before you apply. The user is the
+     reviewer; hiding the diff behind a summary defeats the paper-
+     trail purpose of the dry-run step. Raw API payloads can be
+     omitted unless something looks off.
 4. **Apply:** `python scripts/wd_apply.py --slug <slug> --apply`
    - Logs in via bot password from `.env`.
    - Posts each op in order; resolves placeholders (e.g.

@@ -1,0 +1,22 @@
+{
+  "function_zid": "Z33775",
+  "label": "via best lexeme lemma (P9970)",
+  "summary": "New composition: clone of Z33677 'via best lexeme lemma' with the hardcoded predicate constant swapped from P5137 to P9970. Returns the lemma of the best-ranked lexeme linked to the input item via P9970 in the given language and lexical category.",
+  "expect_args": ["predicate", "language", "lexical category"],
+  "composition": {
+    "call": "Z21806", "name": "lemma string from lexeme and lang",
+    "args": {
+      "Z21806K1": {
+        "label": "lexeme",
+        "call": "Z33071", "name": "best lexeme with category from Wikidata item",
+        "args": {
+          "Z33071K1": {"label": "Lexical category", "ref": "lexical category"},
+          "Z33071K2": {"label": "Item", "ref": "predicate"},
+          "Z33071K3": {"label": "Predicate property (P9970)", "literal": "P9970", "type": "Z6092"},
+          "Z33071K4": {"label": "Language", "ref": "language"}
+        }
+      },
+      "Z21806K2": {"label": "lang", "ref": "language"}
+    }
+  }
+}

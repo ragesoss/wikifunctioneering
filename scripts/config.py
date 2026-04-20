@@ -30,3 +30,17 @@ def _build_user_agent():
 
 
 USER_AGENT = _build_user_agent()
+
+
+def _build_ai_disclosure():
+    """AI disclosure string for edit summaries.
+
+    Source of truth: the `AI_DISCLOSURE` env var (or .env entry). Falls back
+    to a generic, AI-agnostic string so this codebase is portable across
+    different AI tools.
+    """
+    configured = os.environ.get("AI_DISCLOSURE", "") or _read_env("AI_DISCLOSURE")
+    return configured or "Created with AI assistance"
+
+
+AI_DISCLOSURE = _build_ai_disclosure()

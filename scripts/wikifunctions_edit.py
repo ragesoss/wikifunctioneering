@@ -35,9 +35,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from config import WF_API, USER_AGENT
-
-AI_DISCLOSURE = "Created with AI assistance (Claude Opus 4.6)"
+from config import WF_API, USER_AGENT, AI_DISCLOSURE
 
 
 def load_env():
@@ -139,7 +137,7 @@ class WikifunctionsSession:
 def make_edit_summary(user_summary, ai_task=None):
     """Build an edit summary with AI disclosure appended."""
     if ai_task:
-        disclosure = f"Created with AI assistance (Claude Opus 4.6, {ai_task})"
+        disclosure = f"{AI_DISCLOSURE} ({ai_task})"
     else:
         disclosure = AI_DISCLOSURE
     if user_summary:

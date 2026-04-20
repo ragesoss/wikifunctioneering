@@ -86,6 +86,18 @@ The summary should indicate:
 
 This follows the spirit of LZia's recommendation to disclose what specifically AI was used for, even though mandatory disclosure hasn't been adopted yet.
 
+### How the disclosure string is configured
+
+The disclosure string used by both `scripts/wf_browser.rb` (Ruby browser automation) and `scripts/wikifunctions_edit.py` (Python API editor) is sourced from the **`AI_DISCLOSURE` environment variable**, falling back to an entry in `.env`, and then to a generic `"Created with AI assistance"` if neither is set.
+
+Set your own in `.env`:
+
+```
+AI_DISCLOSURE=Created with AI assistance (Claude Opus 4.7)
+```
+
+Don't hardcode a model version in source — version strings go stale, and this codebase is AI-tool-agnostic. A user editing with a different AI should change one line in `.env` rather than hunt down constants.
+
 ---
 
 ## Wikidata norms

@@ -12,7 +12,28 @@ require 'uri'
 
 require_relative 'wf_api'
 
-AI_DISCLOSURE = 'Created with AI assistance (Claude Opus 4.6)'
+# AI disclosure string for edit summaries. Source of truth: the
+# `AI_DISCLOSURE` env var (or .env entry). Falls back to a generic,
+# AI-agnostic string so this codebase is portable across AI tools.
+def load_ai_disclosure
+  from_env = ENV['AI_DISCLOSURE']
+  return from_env if from_env && !from_env.empty?
+
+  env_path = File.expand_path('../../.env', __FILE__)
+  if File.exist?(env_path)
+    File.foreach(env_path) do |line|
+      line = line.strip
+      if line.start_with?('AI_DISCLOSURE=')
+        value = line.split('=', 2)[1]
+        return value if value && !value.empty?
+      end
+    end
+  end
+
+  'Created with AI assistance'
+end
+
+AI_DISCLOSURE = load_ai_disclosure
 
 class WfBrowser
   include WfApi

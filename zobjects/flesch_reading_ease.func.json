@@ -1,0 +1,12 @@
+{
+  "task": "function",
+  "label": "Flesch Reading-Ease score",
+  "description": "Flesch Reading-Ease readability score from total word, sentence, and syllable counts. Computes 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words). Higher scores mean easier reading.",
+  "inputs": [
+    {"label": "words", "type": "Z16683"},
+    {"label": "sentences", "type": "Z16683"},
+    {"label": "syllables", "type": "Z16683"}
+  ],
+  "output_type": "Z20838",
+  "summary": "New function: Flesch Reading-Ease score"
+}

@@ -1,0 +1,76 @@
+{
+  "function_zid": "Z37551",
+  "label": "Flesch formula via float64 arithmetic",
+  "summary": "206.835 - (1.015 * words/sentences) - (84.6 * syllables/words)",
+  "expect_args": ["words", "sentences", "syllables"],
+  "composition": {
+    "call": "Z21031", "name": "subtract (float64)",
+    "args": {
+      "Z21031K1": {
+        "label": "x (constant 206.835)",
+        "call": "Z20915", "name": "string to float64",
+        "args": { "Z20915K1": {"literal": "206.835", "type": "Z6"} }
+      },
+      "Z21031K2": {
+        "label": "y (1.015*ASL + 84.6*ASW)",
+        "call": "Z20849", "name": "add (float64)",
+        "args": {
+          "Z20849K1": {
+            "label": "left (1.015 * words/sentences)",
+            "call": "Z21032", "name": "multiply (float64)",
+            "args": {
+              "Z21032K1": {
+                "label": "multiplicand (constant 1.015)",
+                "call": "Z20915", "name": "string to float64",
+                "args": { "Z20915K1": {"literal": "1.015", "type": "Z6"} }
+              },
+              "Z21032K2": {
+                "label": "multiplier (ASL = words / sentences)",
+                "call": "Z21033", "name": "divide (float64)",
+                "args": {
+                  "Z21033K1": {
+                    "label": "x (words as float64)",
+                    "call": "Z20937", "name": "integer to float64",
+                    "args": { "Z20937K1": {"ref": "words"} }
+                  },
+                  "Z21033K2": {
+                    "label": "y (sentences as float64)",
+                    "call": "Z20937", "name": "integer to float64",
+                    "args": { "Z20937K1": {"ref": "sentences"} }
+                  }
+                }
+              }
+            }
+          },
+          "Z20849K2": {
+            "label": "right (84.6 * syllables/words)",
+            "call": "Z21032", "name": "multiply (float64)",
+            "args": {
+              "Z21032K1": {
+                "label": "multiplicand (constant 84.6)",
+                "call": "Z20915", "name": "string to float64",
+                "args": { "Z20915K1": {"literal": "84.6", "type": "Z6"} }
+              },
+              "Z21032K2": {
+                "label": "multiplier (ASW = syllables / words)",
+                "call": "Z21033", "name": "divide (float64)",
+                "args": {
+                  "Z21033K1": {
+                    "label": "x (syllables as float64)",
+                    "call": "Z20937", "name": "integer to float64",
+                    "args": { "Z20937K1": {"ref": "syllables"} }
+                  },
+                  "Z21033K2": {
+                    "label": "y (words as float64)",
+                    "call": "Z20937", "name": "integer to float64",
+                    "args": { "Z20937K1": {"ref": "words"} }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

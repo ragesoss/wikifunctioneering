@@ -1,0 +1,21 @@
+{
+  "task": "tester",
+  "function_zid": "Z37551",
+  "label": "120w/8s/180syl -> 64.71",
+  "summary": "Flesch test: 120 words, 8 sentences, 180 syllables -> 64.71",
+  "test_call": {
+    "call": "Z37551", "name": "Flesch Reading-Ease score",
+    "args": {
+      "Z37551K1": {"literal": "120", "type": "Z16683"},
+      "Z37551K2": {"literal": "8", "type": "Z16683"},
+      "Z37551K3": {"literal": "180", "type": "Z16683"}
+    }
+  },
+  "validator": {
+    "call": "Z31090", "name": "same float64 within tolerance",
+    "args": {
+      "Z31090K2": {"call": "Z20915", "args": {"Z20915K1": {"literal": "64.71", "type": "Z6"}}},
+      "Z31090K3": {"call": "Z20915", "args": {"Z20915K1": {"literal": "0.001", "type": "Z6"}}}
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "task": "tester",
+  "function_zid": "Z18522",
+  "label": "GR1 simple period boundary",
+  "summary": "Golden Rule 1: simple period boundary",
+  "test_call": {
+    "call": "Z18522", "name": "segment sentences",
+    "args": {
+      "Z18522K1": {"literal": "Willy on Wheels vandalized thousands of pages. His account was quickly blocked.", "type": "Z6"}
+    }
+  },
+  "validator": {
+    "call": "Z889", "name": "List equality",
+    "args": {
+      "Z889K2": {"list": ["Willy on Wheels vandalized thousands of pages.", "His account was quickly blocked."], "type": "Z6"},
+      "Z889K3": {"literal": "Z866", "type": "Z9"}
+    }
+  }
+}

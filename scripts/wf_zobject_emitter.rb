@@ -31,10 +31,39 @@ module WfZObjectEmitter
       emit_call(node, function_zid: function_zid, api_info: api_info)
     elsif node['ref']
       emit_ref(node, function_zid: function_zid, api_info: api_info)
+    elsif node.key?('list')
+      emit_list(node, function_zid: function_zid, api_info: api_info)
     elsif node.key?('literal')
       emit_literal(node)
     else
-      raise "wf_zobject_emitter: node has no call/ref/literal key: #{node.inspect}"
+      raise "wf_zobject_emitter: node has no call/ref/literal/list key: #{node.inspect}"
+    end
+  end
+
+  # Emit a typed list literal in canonical (Benjamin-array) form:
+  # {"list": ["a", "b"], "type": "Z6"}  ->  ["Z6", "a", "b"].
+  # Elements may be raw scalars (emitted per the list's element type) or
+  # full nodes (call/ref/literal/list), which are emitted recursively.
+  def emit_list(node, function_zid:, api_info:)
+    type = node['type']
+    raise "emit_list: node has no type: #{node.inspect}" unless type
+
+    elements = node['list'] || []
+    [type] + elements.map do |el|
+      if el.is_a?(Hash)
+        emit(el, function_zid: function_zid, api_info: api_info)
+      else
+        emit_scalar_element(el, type)
+      end
+    end
+  end
+
+  # A bare scalar inside a list literal, emitted per the element type.
+  # Z6/Z9 use canonical shorthand (bare string); others reuse emit_literal.
+  def emit_scalar_element(value, type)
+    case type
+    when 'Z6', 'Z9' then value.to_s
+    else emit_literal('literal' => value, 'type' => type)
     end
   end
 

@@ -115,8 +115,60 @@ Input values: strings (`"C"`), integers (`4`), Wikidata items (`{"fetch": "Q1234
 
 Iterate on the composition tree until all test cases produce correct results. Only then proceed to creating on-wiki.
 
-### 8. Build via browser automation
-When the composition is validated, use the browser automation toolkit to build it:
+### 8. Build on-wiki
+
+When the composition is validated, create the ZObjects. There are two
+paths; **prefer the OAuth API** — it's faster, headless, and has no
+browser fragility.
+
+#### Preferred: OAuth API (no browser)
+
+As of 2026-07-10 the OAuth token in `.env` (`WF_OAUTH_TOKEN`) carries the
+full `wikilambda-*` right set, so compositions and testers can be created
+and edited with a plain HTTP call. (This used to return `Z557` — that
+server-side restriction is gone; see
+`docs/session-notes/2026-07-10-oauth-api-edits.md`.) Emit the ZObject from
+the **same spec files** the browser path uses, then POST:
+
+```bash
+# composition / tester spec  ->  server-ready Z2 JSON  ->  create on-wiki
+ruby scripts/wf_emit_zobject.rb zobjects/my.comp.json \
+  | CLAUDE_MODEL=claude-opus-4-8 python scripts/wikifunctions_edit.py create \
+      --summary "Add composition: ..."
+
+ruby scripts/wf_emit_zobject.rb zobjects/my_test.tester.json \
+  | CLAUDE_MODEL=claude-opus-4-8 python scripts/wikifunctions_edit.py create \
+      --summary "Test: ..."
+
+# edit an existing object: fetch raw, mutate, update by ZID
+curl -s "https://www.wikifunctions.org/wiki/Z####?action=raw" > obj.json
+#   ...mutate obj.json...
+python scripts/wikifunctions_edit.py update Z#### --file obj.json --summary "..."
+```
+
+- **Pass `CLAUDE_MODEL=<your model id>`** (e.g. `claude-opus-4-8`) so the
+  AI-disclosure edit summary names the right model. `.env`'s
+  `AI_DISCLOSURE` holds a `{model}` placeholder that both the Ruby and
+  Python tooling fill from `CLAUDE_MODEL` / `AI_MODEL` (dropping the
+  parenthetical if unset). Don't hardcode a version in `.env`.
+- `wf_emit_zobject.rb` reuses the browser route's emitter and fetches
+  argument labels to resolve `{"ref": "..."}` nodes, so the `.comp.json`
+  / `.tester.json` specs are identical across both paths.
+- **Two things the token still can't do:**
+  - **Function shells** aren't emitted by `wf_emit_zobject.rb` yet —
+    create those via the browser path below (or hand-build the Z8 JSON
+    for `wikifunctions_edit.py create`).
+  - **Connecting** (see the connected-toggle note below) requires editing
+    a function that has a connected implementation, which the token is
+    denied. It's a manual step on the function page either way.
+
+#### Fallback: browser automation
+
+Still useful for function-shell creation and when you want to drive the
+real UI. When Claude drives `wf.rb`, pass `--mode=ui` **or** rely on the
+now-fixed `--mode=api` auto-save (it detects non-TTY stdin and clicks Save
+itself). Pass `CLAUDE_MODEL=...` here too for the disclosure string.
+
 ```bash
 ruby scripts/wf.rb zobjects/my_function.func.json          # create function shell
 ruby scripts/wf.rb zobjects/my_function.comp.json          # add / edit composition
@@ -130,6 +182,8 @@ The toolkit (`scripts/wf.rb`) dispatches to task-specific handlers:
 - `scripts/wf_task_tester.rb` — testers (create / edit)
 - `scripts/wf_composition_builder.rb` — shared `build_function_call` /
   `fill_argument` mixin used by the composition and tester tasks
+- `scripts/wf_zobject_emitter.rb` — spec-tree → canonical ZObject JSON
+  (shared by API mode and `wf_emit_zobject.rb`)
 
 **Composition spec format:**
 ```json
@@ -197,11 +251,17 @@ by hand:
 }
 ```
 
-**After publishing: wait for the "connected" toggle.** New Z14
-implementations and new Z20 testers land *disconnected* — absent from
-`Z8K4`/`Z8K3`, so the runtime returns `Z503`. The toolkit blocks after
-publish until the user toggles them connected on the function page
-(up to 24h). Don't report a task as done until that completes.
+**After publishing: the "connected" toggle is a manual step (both
+paths).** New Z14 implementations and new Z20 testers land
+*disconnected* — absent from `Z8K4`/`Z8K3`, so the runtime returns
+`Z503`. Connecting means editing the function's `Z8K3`/`Z8K4`, and the
+OAuth token is **denied** that edit once the function has any connected
+implementation (`"You don't have permission to edit Function that has a
+connected Implementation"`). So the user must toggle connected on the
+function page in their own browser session — the API can't do it. The
+`wf.rb` toolkit blocks after publish until this happens (up to 24h); when
+you create via the API, poll `Z8K3`/`Z8K4` (`?action=raw`) and ask the
+user to toggle. Don't report a task as done until the toggle completes.
 
 **Operational notes:**
 - Persistent Chrome profile at `.browser-profile/` keeps you logged in

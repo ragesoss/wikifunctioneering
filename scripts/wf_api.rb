@@ -3,12 +3,18 @@
 # API primitives for the `wikilambda_edit` endpoint, executed inside the
 # Selenium-controlled browser's session.
 #
-# Why run through the browser rather than a standalone HTTP client:
-# wikilambda-* rights are not registered in $wgGrantPermissions, so
-# bot-password and OAuth-scoped tokens get Z557 back. A full user
-# session (the one our persistent Chrome profile already carries) does
-# have those rights, and executing `fetch` / `mw.Api` inside that
-# session piggybacks on them cleanly.
+# NOTE (2026-07-10): the historical reason for running edits through the
+# browser — that wikilambda-* rights weren't in $wgGrantPermissions, so
+# OAuth/bot tokens got Z557 — NO LONGER HOLDS. OAuth-scoped tokens now
+# carry the full wikilambda-* right set, so standalone HTTP creates/edits
+# work via `scripts/wikifunctions_edit.py` (see docs/session-notes/
+# 2026-07-10-oauth-api-edits.md). Prefer that headless path for new work.
+#
+# This in-browser module is retained for the Selenium build path and for
+# the ONE thing the token still can't do: editing a function that already
+# has a connected implementation (the "connect" toggle) is denied to the
+# OAuth grant but works in a full user session. Connecting is a manual
+# step regardless, so in practice the browser is now optional.
 #
 # Mixed into WfBrowser so callers can say `wf.api_fetch_raw(zid)` and
 # `wf.api_wikilambda_edit(zid: ..., zobject: ..., summary: ...)`.

@@ -102,7 +102,9 @@ begin
   new_zid = mode == :api ? task.run_api : task.run
   success = true
 
-  if mode == :api
+  if mode == :api && $stdin.tty?
+    # Human at an interactive terminal: let them review the populated
+    # textarea + summary and click Save themselves.
     puts ''
     if new_zid
       puts "Populated Edit Raw JSON for #{new_zid}."
@@ -112,6 +114,12 @@ begin
     puts 'Review the textarea + summary in the browser, then click Save.'
     puts 'Press Enter here when you are done (this closes the browser).'
     $stdin.gets
+  elsif mode == :api
+    # Non-interactive (Claude driving): stdin is EOF, so there's no one to
+    # press Enter. Auto-click Save, verify, and wait for the connect toggle.
+    new_zid = task.commit_api
+    puts ''
+    puts "Done: #{new_zid}"
   else
     puts ''
     puts "Done: #{new_zid}"

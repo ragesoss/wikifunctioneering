@@ -60,6 +60,16 @@ class WfTaskComposition
     impl_zid
   end
 
+  # Non-interactive commit for API mode: click Save, read back the ZID,
+  # then wait for the connect toggle. Called by wf.rb when stdin is not a
+  # TTY (Claude driving); a human running interactively saves themselves.
+  def commit_api
+    mode = @spec['implementation_zid'] ? :edit : :create
+    zid = @wf.save_raw_json(mode: mode, known_zid: @spec['implementation_zid'])
+    @wf.wait_for_impl_connected(@spec['function_zid'], zid) if zid && @spec['function_zid']
+    zid
+  end
+
   def run_api_create
     @wf.set_function_zid(@spec['function_zid'])
 

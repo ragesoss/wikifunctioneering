@@ -70,6 +70,16 @@ class WfTaskTester
     end
   end
 
+  # Non-interactive commit for API mode: click Save, read back the ZID,
+  # then wait for the connect toggle. Called by wf.rb when stdin is not a
+  # TTY (Claude driving); a human running interactively saves themselves.
+  def commit_api
+    mode = @spec['tester_zid'] ? :edit : :create
+    zid = @wf.save_raw_json(mode: mode, known_zid: @spec['tester_zid'])
+    @wf.wait_for_tester_connected(@spec['function_zid'], zid) if zid && @spec['function_zid']
+    zid
+  end
+
   def run_api_edit
     tester_zid = @spec['tester_zid']
     @wf.set_function_zid(@spec['function_zid']) if @spec['function_zid']

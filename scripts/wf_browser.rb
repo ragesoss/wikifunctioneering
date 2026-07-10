@@ -15,7 +15,17 @@ require_relative 'wf_api'
 # AI disclosure string for edit summaries. Source of truth: the
 # `AI_DISCLOSURE` env var (or .env entry). Falls back to a generic,
 # AI-agnostic string so this codebase is portable across AI tools.
+#
+# The template may contain a `{model}` placeholder, which is filled from
+# the CLAUDE_MODEL (or AI_MODEL) env var at run time — so the driving
+# model stays accurate without anyone hand-editing the version. If no
+# model env var is set, the "({model})" segment is dropped cleanly.
 def load_ai_disclosure
+  template = disclosure_template
+  fill_disclosure_model(template)
+end
+
+def disclosure_template
   from_env = ENV['AI_DISCLOSURE']
   return from_env if from_env && !from_env.empty?
 
@@ -23,6 +33,8 @@ def load_ai_disclosure
   if File.exist?(env_path)
     File.foreach(env_path) do |line|
       line = line.strip
+      next if line.start_with?('#')
+
       if line.start_with?('AI_DISCLOSURE=')
         value = line.split('=', 2)[1]
         return value if value && !value.empty?
@@ -30,7 +42,38 @@ def load_ai_disclosure
     end
   end
 
-  'Created with AI assistance'
+  'Created with AI assistance ({model})'
+end
+
+# Substitute {model} in a disclosure template. With a model available,
+# "...assistance ({model})" -> "...assistance (Claude Opus 4.8)". Without
+# one, the parenthetical is removed so we never emit a literal "{model}".
+def fill_disclosure_model(template)
+  return template unless template.include?('{model}')
+
+  model = pretty_model(ENV['CLAUDE_MODEL'] || ENV['AI_MODEL'])
+  return template.gsub('{model}', model) if model
+
+  template.gsub(/\s*\(\{model\}\)/, '').gsub('{model}', '').strip
+end
+
+# Turn a model id like "claude-opus-4-8[1m]" into "Claude Opus 4.8".
+# Date-stamp segments (e.g. "20251001") are dropped. Unrecognized ids
+# fall back to a Title-Cased rendering of the raw id.
+def pretty_model(id)
+  return nil if id.nil?
+
+  id = id.strip.sub(/\[.*\]\z/, '')
+  return nil if id.empty?
+
+  parts = id.split('-')
+  families = %w[opus sonnet haiku fable]
+  fam = parts.find { |p| families.include?(p.downcase) }
+  return parts.map(&:capitalize).join(' ') unless fam
+
+  fam_idx = parts.index(fam)
+  version = parts[(fam_idx + 1)..].to_a.select { |p| p =~ /\A\d{1,3}\z/ }.join('.')
+  ['Claude', fam.capitalize, (version.empty? ? nil : version)].compact.join(' ')
 end
 
 AI_DISCLOSURE = load_ai_disclosure
@@ -899,6 +942,62 @@ class WfBrowser
     textarea = wait_for_raw_json_textarea
     set_textarea_value(textarea, zobject_json)
     fill_raw_json_summary(summary)
+  end
+
+  # Click the userscript's Save button and wait for the outcome. On a
+  # successful create the userscript navigates to the new ZID page; on a
+  # successful edit it removes the editor widget and shows a "Saved"
+  # notice. On failure the widget stays and an error notification appears.
+  #
+  # This is the non-interactive counterpart to the human "review then
+  # click Save" flow — used when wf.rb detects stdin is not a TTY (i.e.
+  # Claude is driving). Returns the resulting ZID (the freshly-assigned
+  # one for creates, `known_zid` for edits).
+  def save_raw_json(mode:, known_zid: nil)
+    save_btn = slow_wait(tag: 'raw-json-save-button') { safe_find('#wf-raw-json-save') }
+    pre_url = @driver.current_url
+    step 'Clicking Save (raw JSON)...'
+    scroll_to(save_btn)
+    short_pause
+    save_btn.click
+
+    # The widget removes itself on success (both modes). Until then, a
+    # notification means the save was rejected — surface it rather than
+    # spin until timeout. A save is a network round-trip, so allow more
+    # headroom than a UI-render wait.
+    poll_until(timeout: 45, interval: 1, waiting_for: 'raw-json save') do
+      if @driver.execute_script('return !document.getElementById("wf-raw-json-widget")')
+        true
+      else
+        err = raw_json_notification
+        raise "Raw-JSON save was rejected: #{err}" if err && !err.include?('Saved')
+
+        nil
+      end
+    end
+
+    return known_zid unless mode == :create
+
+    # Create navigates to the new page; read the ZID off the URL.
+    new_zid = poll_until(timeout: 30, interval: 1, waiting_for: 'new ZID url') do
+      url = @driver.current_url
+      next nil if url == pre_url
+
+      url.match(%r{/(Z\d+)(?:\?|$)})&.[](1)
+    end
+    log "Saved: #{new_zid}"
+    new_zid
+  end
+
+  # Text of a visible MediaWiki notification, if one is present. Used to
+  # detect raw-JSON save failures ("Save failed: ...", "Invalid JSON: ...").
+  def raw_json_notification
+    @driver.execute_script(<<~JS)
+      const n = document.querySelector('.mw-notification');
+      if (!n) return null;
+      const t = n.textContent.trim();
+      return t.length ? t : null;
+    JS
   end
 
   # ── UI primitives: "Edit source" ─────────────────────────────

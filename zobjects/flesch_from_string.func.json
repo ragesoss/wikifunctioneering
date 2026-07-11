@@ -1,0 +1,8 @@
+{
+  "task": "function",
+  "label": "Flesch Reading-Ease of text",
+  "description": "Flesch Reading-Ease readability score computed from a raw English text string. Counts words, sentences, and syllables from the text and applies 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words). English-only; syllable counting and sentence segmentation are approximate.",
+  "inputs": [{"label": "text", "type": "Z6"}],
+  "output_type": "Z20838",
+  "summary": "New function: Flesch Reading-Ease of text"
+}

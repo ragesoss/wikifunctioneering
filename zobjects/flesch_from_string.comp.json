@@ -1,0 +1,55 @@
+{
+  "function_zid": "Z37609",
+  "label": "FRES from text via word/sentence/syllable counts",
+  "summary": "206.835 - 1.015*(words/sentences) - 84.6*(syllables/words), all counted from the text",
+  "expect_args": ["text"],
+  "composition": {
+    "call": "Z37551", "name": "Flesch Reading-Ease score",
+    "args": {
+      "Z37551K1": {
+        "label": "words (count)",
+        "call": "Z17101", "name": "natural number to integer",
+        "args": {"Z17101K1": {
+          "call": "Z12681", "name": "length of a list",
+          "args": {"Z12681K1": {
+            "call": "Z13402", "name": "words from string",
+            "args": {"Z13402K1": {"ref": "text"}}
+          }}
+        }}
+      },
+      "Z37551K2": {
+        "label": "sentences (count)",
+        "call": "Z17101", "name": "natural number to integer",
+        "args": {"Z17101K1": {
+          "call": "Z12681", "name": "length of a list",
+          "args": {"Z12681K1": {
+            "call": "Z18522", "name": "segment sentences",
+            "args": {"Z18522K1": {"ref": "text"}}
+          }}
+        }}
+      },
+      "Z37551K3": {
+        "label": "syllables (total)",
+        "call": "Z17101", "name": "natural number to integer",
+        "args": {"Z17101K1": {
+          "call": "Z20089", "name": "reduce",
+          "args": {
+            "Z20089K1": {"literal": "Z13521", "type": "Z9"},
+            "Z20089K2": {
+              "call": "Z13436", "name": "map (apply syllable count to each word)",
+              "args": {
+                "Z13436K1": {"literal": "Z13036", "type": "Z9"},
+                "Z13436K2": {"literal": "Z29940", "type": "Z9"},
+                "Z13436K3": {
+                  "call": "Z13402", "name": "words from string",
+                  "args": {"Z13402K1": {"ref": "text"}}
+                }
+              }
+            },
+            "Z20089K3": {"literal": "0", "type": "Z13518"}
+          }
+        }}
+      }
+    }
+  }
+}

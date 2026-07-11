@@ -58,7 +58,26 @@ Z18522, which we didn't create, and even before it had any connected
 impl). The user connected the impl + all 52 testers by hand. If we do
 another large tester batch, warn about the toggle count up front.
 
-## v2 opportunities (biggest win first)
+## v2 shipped — list-mode (38 → 47/52)
+
+Same session: added a **list mode** to Z37556 and redeployed. If the text
+begins with a list marker (`•`/`⁃` bullet, `1.`/`1)`/`1.)`, or `a.`), it's
+treated as a list — split only *before* each marker instead of doing
+prose sentence-splitting. Key guard: list mode triggers only when the text
+*starts* with a marker, so the 38 prose cases are untouched. A negative
+lookbehind `(?<![•⁃])` keeps the space inside a "• 9." marker from
+splitting off a stray bullet. Now passes Golden Rules 31–39.
+
+**Deploy gotcha:** editing a *connected* implementation is denied to the
+OAuth token (`Z557`: "you don't have permission to edit Implementation
+that is connected to a Function"). Workflow that worked: user disconnects
+the impl → we edit Z37556's `Z16K2` via API → user reconnects. (Creating a
+second impl and swapping also works but leaves a stray object.)
+
+Remaining red (5): 16 (U.S. Government), 18 (Holy Grail), 41/42 (newline
+conventions), 51 (four-dot ellipsis continuation).
+
+## v3+ opportunities (biggest win first)
 
 1. **Lists (GR31–39, +9)** — the single biggest gain. Needs a list-mode:
    detect leading markers (`1.`/`1)`/`1.)`/`a.`/`•`/`⁃`) and split *before*

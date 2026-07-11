@@ -2,6 +2,14 @@ def Z18522(Z18522K1):
     import re
     MARK = chr(0xE000)
     DOT = chr(0xE001)
+    # List mode: if the text BEGINS with a list marker (bullet, number, or
+    # single letter + . / ) / .) ), it's a list, not prose — split only
+    # BEFORE each marker. Longest marker variants come first in the group.
+    MARKER = r"(?:[•⁃]\s*\d+\.|\d+\.\)|\d+\)|\d+\.|[a-z]\.)"
+    if re.match(r"\s*" + MARKER + r"\s", Z18522K1):
+        # (?<![•⁃]) keeps the space inside a "• 9." marker from splitting.
+        marked = re.sub(r"(?<![•⁃])\s+(" + MARKER + r"\s)", MARK + r"\1", Z18522K1)
+        return [p.strip() for p in marked.split(MARK) if p.strip()]
     ALWAYS = ["mr", "mrs", "ms", "dr", "prof", "st", "mt", "sr", "jr", "rev",
               "gov", "sen", "rep", "pres", "hon", "fr", "col", "gen", "lt",
               "sgt", "capt", "sir", "pope", "messrs", "no", "vol", "pp", "p",

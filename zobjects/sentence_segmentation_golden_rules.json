@@ -2,10 +2,11 @@
   "_about": "Wiki-themed port of the pragmatic_segmenter English Golden Rules (52 sentence-boundary edge cases). Each case keeps the ORIGINAL rule's mechanism but uses Wikipedia/Wikidata/Wikifunctions/Wikimedia content, leaning on Wikipedia vandalism & anti-vandalism lore (Willy on Wheels' page-move vandalism and 'on Wheels!' suffix, ClueBot NG, reverting, blanking, AIV, recent-changes patrol). Real named community members are avoided (Denny Vrandečić is an allowed exception); names required by a rule's mechanism use generic placeholders (Dr. Lee, Mr. Ito) or non-community article subjects (Ursula K. Le Guin, Michael I. Jordan). Sources: pragmatic_segmenter Golden Rules (https://github.com/diasks2/pragmatic_segmenter), PySBD (https://aclanthology.org/2020.nlposs-1.15/), Vandalism on Wikipedia (https://en.wikipedia.org/wiki/Vandalism_on_Wikipedia). Target function: Z18522 'segment sentences' (text: Z6) -> List(Z6). Expected arrays follow pragmatic_segmenter conventions (sentences trimmed; errant newlines handled per rules 40-42).",
   "target_function": "Z18522",
   "on_wiki": {
-    "implementation": "Z37556 (pragmatic-v1, Python code)",
+    "implementation": "Z37556 (Python code; v2 adds list-mode)",
     "testers": "Z37557..Z37608 — the tester for rule n is Z(37556+n)",
     "connected": "2026-07-10 (impl + all 52 testers connected to Z18522)",
-    "score": "38/52 pass; red (v1 gaps): 16, 18, 31-39, 41, 42, 51",
+    "score": "47/52 pass (v2); red (remaining gaps): 16, 18, 41, 42, 51",
+    "history": "v1 38/52 (2026-07-10); v2 47/52 added list-mode for rules 31-39",
     "rescore": "python scripts/score_segmentation.py"
   },
   "rules": [

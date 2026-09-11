@@ -237,6 +237,10 @@ Helpers built on these (created 2026-09-11; specs in `zobjects/`, design in
 | Z41797 | lexeme sense is in field of usage? | sense: Z6006, field of usage: Z6091 → Boolean | Z27340 with the predicate fixed to P9488 |
 | Z41801 | lexeme sense in field of usage | lexeme: Z6005, field of usage: Z6091 → Z6006 | `Z811(Z28316(Z41797, Z19282(lexeme), field))`; picks e.g. the music sense of "re" over its sargam sense |
 | Z41804 | lexeme sense for word in field of usage | word: Z6, language: Z60, field of usage: Z6091 → Z6006 | **String → sense lookup with no word table:** `Z41801(Z6825(Z811(Z28316(Z41793, Z6830(field, P9488, language), word))), field)` |
+| Z41819 | lexeme sense has name type? | sense: Z6006, name type: Z6091 → Boolean | Z27340 with the predicate fixed to P14792 "name type" (values: toponym, color term, Q141435500 solfège syllable…) |
+| Z41827 | lexeme reference has sense with name type? | lexeme reference: Z6095, name type: Z6091 → Boolean | `not(is empty(Z28316(Z41819, senses of fetched lexeme, type)))`; reference-level predicate for Z28316 |
+| Z41831 | word for concept with name type | concept: Z6091, language: Z60, name type: Z6091 → String | First lemma of the first Z6830(concept, P5137, language) hit passing Z41827. "The solfège syllable for the dominant", not "dominant" |
+| Z41820 | item from item, property, and object role | item: Z6091, property: Z6092, object role: Z6091 → Z6091 | `Z19308(Z23680(Z31659(Z6821(item), property, P3831, role)))`; picks the P460 value with the given role qualifier. Generalises Z31108 |
 
 ## Lexemes / Wikidata-grounded text (user-created)
 
@@ -244,3 +248,4 @@ Helpers built on these (created 2026-09-11; specs in `zobjects/`, design in
 |-----|------|-----------|-------|
 | Z33668 | word for concept | concept: Z6091, language: Z60, lexical category: Z6091 → String | Looks up the best-ranked lexeme whose `item for this sense` (P5137) points at the concept, and returns its lemma. Wraps Z33071 + Z21806.
 | Z26184 | solfege to sargam | solfege note: String → String | Implementation Z41808 is pure composition with no syllable table: `Z33668(Z28787(Z21577(Z41804(note, English, Q638 music)), P460), English, Q1084 noun)`. The earlier Z33678 reaches the hard-coded Z29515.
+| Z41832 | sargam to solfege | sargam note: String → String | Inverse of Z26184, pure composition: `Z41831(Z41820(Z21577(Z41804(note, English, Q1323698)), P460, Q586277 degree), English, Q141435500 solfège syllable)`. Needs the P3831 role qualifiers and P14792 name types added to Wikidata on 2026-09-11.

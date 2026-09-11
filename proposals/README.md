@@ -35,6 +35,8 @@ draft  →  (review with wd_propose.py)  →  (approve in conversation)
 - `create_item` — new Q-item with labels/descriptions/aliases/claims
 - `add_sense` — append a new sense to an existing lexeme
 - `add_claim` — add a statement on any entity (Q, L, or L-Sn for senses)
+- `add_qualifier` — add an item-valued qualifier to an existing statement
+  by GUID, with a pre-check that the statement is the expected one
 - `update_description`, `add_alias`, `update_label` — planned; thin
   wrappers
 

@@ -1,0 +1,10 @@
+{
+  "task": "tester",
+  "function_zid": "Z41819",
+  "label": "L319695-S1 (dominant) is not a solfège syllable",
+  "summary": "Test: L319695-S1 ('dominant', the theory term) has no P14792 = Q141435500 -> false",
+  "test_call": {"call": "Z41819", "args": {
+    "Z41819K1": {"call": "Z6826", "name": "Fetch Wikidata lexeme sense", "args": {"Z6826K1": {"literal": "L319695-S1", "type": "Z6096"}}},
+    "Z41819K2": {"literal": "Q141435500", "type": "Z6091"}}},
+  "validator": {"call": "Z844", "name": "Boolean equality", "args": {"Z844K2": {"literal": "Z42", "type": "Z40"}}}
+}

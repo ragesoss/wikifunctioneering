@@ -1,0 +1,11 @@
+{
+  "task": "tester",
+  "function_zid": "Z41820",
+  "label": "Panchama, P460, role degree -> dominant",
+  "summary": "Test: Panchama (Q15651222) said to be the same as, in the role of scale degree, is Q899391 dominant (not the note G)",
+  "test_call": {"call": "Z41820", "args": {
+    "Z41820K1": {"literal": "Q15651222", "type": "Z6091"},
+    "Z41820K2": {"literal": "P460", "type": "Z6092"},
+    "Z41820K3": {"literal": "Q586277", "type": "Z6091"}}},
+  "validator": {"call": "Z19316", "name": "same Wikidata item reference", "args": {"Z19316K2": {"literal": "Q899391", "type": "Z6091"}}}
+}

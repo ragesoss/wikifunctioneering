@@ -1,0 +1,11 @@
+{
+  "task": "tester",
+  "function_zid": "Z41820",
+  "label": "dominant, P460, role svara -> Panchama",
+  "summary": "Test: dominant (Q899391) said to be the same as, in the role of svara (Q7380503), is Q15651222 Panchama (forward direction, mirrors Z31108)",
+  "test_call": {"call": "Z41820", "args": {
+    "Z41820K1": {"literal": "Q899391", "type": "Z6091"},
+    "Z41820K2": {"literal": "P460", "type": "Z6092"},
+    "Z41820K3": {"literal": "Q7380503", "type": "Z6091"}}},
+  "validator": {"call": "Z19316", "name": "same Wikidata item reference", "args": {"Z19316K2": {"literal": "Q15651222", "type": "Z6091"}}}
+}

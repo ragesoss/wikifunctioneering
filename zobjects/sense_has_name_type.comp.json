@@ -1,0 +1,14 @@
+{
+  "function_zid": "Z41819",
+  "label": "via lexeme sense has specific statement (P14792)",
+  "summary": "Add composition: lexeme sense has specific statement?(sense, P14792, name type)",
+  "expect_args": ["sense", "name type"],
+  "composition": {
+    "call": "Z27340", "name": "lexeme sense has specific statement?",
+    "args": {
+      "Z27340K1": {"label": "sense", "ref": "sense"},
+      "Z27340K2": {"label": "predicate (P14792 name type)", "literal": "P14792", "type": "Z6092"},
+      "Z27340K3": {"label": "value", "ref": "name type"}
+    }
+  }
+}

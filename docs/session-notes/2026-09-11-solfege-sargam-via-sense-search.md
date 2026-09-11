@@ -243,6 +243,107 @@ Z33668: word for concept
   Z29515 and Z30555 could themselves get pure implementations via
   Z41804 (Z23127(Z23112(sense)) gives the LSID string).
 
+## Reverse function (sargam → solfège): scoping and Wikidata edits
+
+Data survey for the reverse direction:
+
+- word → sense: Z41804 with field Q1323698 (Indian classical music)
+  finds exactly the 7 sargam lexemes.
+- svara → scale degree: each svara item has **two unqualified P460
+  values** (a note name such as "D" and the scale degree), so Z28787
+  "best statement" is not safe. Filtering by "instance of degree" also
+  fails: supertonic and mediant only have P279 → degree, and the note
+  "C" (Q843813) is itself wrongly P31 → degree.
+- scale degree → word: tonic, mediant and dominant are also linked from
+  theory-term lexemes ("tonic", "mediant", "dominant"), and dominant has
+  both "so" and "sol". Wikidata's search order was stable across runs
+  ("so" first) but is not guaranteed.
+
+Decisions (user): output is a string, first match; two Wikidata edits.
+
+1. **Role qualifiers (applied 2026-09-11):** P3831 "object of statement
+   has role" = Q586277 degree on the seven svara → scale-degree P460
+   statements, mirroring the existing degree → svara statements
+   (P3831 = svara). Proposal `proposals/svara-degree-role-qualifiers.json`
+   (7 × new `add_qualifier` op). Q586277 is a subclass of Q4897819 role;
+   P3831's none-of lists don't include it.
+2. **Name type (proposed):** a new class item "solfège syllable" (P31
+   Q134599141 type of name; P279 Q82799 name, Q1969448 term; P361
+   Q159563 solfège), then P14792 "name type" → it on the eight solfège
+   senses. Chosen over P9488 → Q159563 because P9488's 985 values are
+   almost all disciplines and no system (solfège/solmization/sargam) is
+   used as one; P14792's values (toponym, scientific name, color term…)
+   are exactly "what kind of name this sense is". Proposal
+   `proposals/solfege-syllable-name-type.json` — **applied 2026-09-11:
+   new item Q141435500 "solfège syllable"**, P14792 → Q141435500 on the
+   eight senses.
+
+Prototype (`zobjects/sargam_to_solfege_prototype.comp.json`, two nested
+lambdas for the name-type predicates, everything else existing
+functions): with the discriminator temporarily swapped to the cached
+P9488 = music statements, sa→do, ga→mi, ma→fa, pa→so, dha→la, ni→ti all
+pass; "re" fails only because Rishabha was fetched (and thus cached
+stale) before its qualifier was added. With the final P14792 =
+Q141435500 literals the same run fails on every input because the
+eight solfège lexemes were fetched earlier today and the orchestrator's
+entity cache predates the new sense statements — Wikidata's own search
+already returns all eight for `haswbstatement:P14792=Q141435500`. So:
+structure validated today, data validated on Wikidata, the combined
+testers can only go green once the cache expires.
+
+The existing Z31659 "get property statements with qualifier from item"
+(composition Z31660 → Z29870 + Z35133) works — the April note that the
+qualifier filters were broken applied to Z31655, not this one. Z31108
+"Western musical scale degree to Svara" already uses it forward.
+
+### Publishing log (reverse side)
+
+All created via the OAuth API on 2026-09-11; connect toggles pending.
+
+| function | ZID | composition | testers |
+|---|---|---|---|
+| lexeme sense has name type? | Z41819 | Z41821 | Z41822 (so → true), Z41823 (dominant → false) |
+| item from item, property, and object role | Z41820 | Z41824 | Z41825 (Panchama/P460/degree → dominant), Z41826 (dominant/P460/svara → Panchama) — both PASS |
+| lexeme reference has sense with name type? | Z41827 | Z41828 | Z41829 (L328069 → true), Z41830 (L319695 → false) |
+| word for concept with name type | Z41831 | Z41833 | Z41834 (tonic → do), Z41835 (dominant → so/sol) |
+| **sargam to solfege** | **Z41832** | Z41842 | Z41836 sa, Z41843 re, Z41837 ga, Z41838 ma, Z41839 pa (so/sol), Z41840 dha, Z41841 ni |
+
+Gotchas met while publishing:
+
+- **Labels are unique per language across all objects, not per
+  function.** The composition label "via Wikidata sense search, no
+  syllable table" (already used by Z41808) and the tester label
+  "re -> re" (Z36261) were both refused with Z554; renamed to "via svara
+  role qualifier and solfège name type" and "sargam re -> solfège re".
+- **Descriptions are capped at 500 characters** (Z500 "Description in
+  English must be 500 characters or shorter"); `wf_emit_function_shell.py`
+  now checks this up front.
+- For a tester whose expected value is "one of several", use a validator
+  whose **first** argument is the result (the runner fills K1): Z11094
+  "string is element of CSV" with K2 = "so,sol" works; Z12696 "contains"
+  has the list first and would not.
+- `perform_test` only substitutes the implementation of the function
+  under test; nested calls to *other* new functions go through their
+  connected implementations. So F (calls Z41819), H (calls Z41827) and
+  Z41832 (calls Z41820, Z41831, Z41804) cannot pass until the helpers
+  below them are connected — their pre-toggle results were `"Z42"`
+  (canonical bare Boolean, not an error object). Connect bottom-up:
+  E → F → H → function.
+- The name-type testers (E, F, H, and the function) also read the eight
+  solfège lexemes, which the orchestrator cached before the P14792
+  statements were added, so they report false until that cache expires
+  even once connected. G's testers pass now. Re-run `perform_test` (or
+  look at the on-wiki test table) later before judging them.
+- **Control test proving the chain (2026-09-11 19:35 UTC, all five
+  connected):** Z41831(Q3257809 purple, English, Q376431 color term) →
+  "purple" — a name-type sense never fetched before, so no stale cache.
+  E → F → H work end to end; the solfège testers fail only because
+  L319652…L329319 are cached pre-edit. Z41832("sa") live → empty-list
+  error at Z811 inside Z41831, exactly that cache miss. The on-wiki test
+  table can also show results computed *before* a nested helper was
+  connected (Z41830 showed red, then passed on re-run once Z41819 was
+  connected); reload after connecting bottom-up.
+
 ## Tooling changes this session
 
 - **`composition_run.py` / `composition_debug.py`: `{"lambda": ...}`

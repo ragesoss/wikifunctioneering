@@ -1,0 +1,40 @@
+{
+  "function_zid": "Z41831",
+  "label": "via Z6830 P5137 search, name-type filter, first lemma",
+  "summary": "Add composition: first lemma of lexeme(fetch lexeme(first element(filter with second common element(lexeme reference has sense with name type?, Z6830(concept, P5137, language), name type))))",
+  "expect_args": ["concept", "language", "name type"],
+  "composition": {
+    "call": "Z27423", "name": "first lemma of lexeme",
+    "args": {
+      "Z27423K1": {
+        "label": "lexeme",
+        "call": "Z6825", "name": "fetch Wikidata lexeme",
+        "args": {
+          "Z6825K1": {
+            "label": "Wikidata lexeme reference",
+            "call": "Z811", "name": "first element",
+            "args": {
+              "Z811K1": {
+                "label": "list",
+                "call": "Z28316", "name": "filter with second common element",
+                "args": {
+                  "Z28316K1": {"label": "two-argument function", "literal": "Z41827", "type": "Z9"},
+                  "Z28316K2": {
+                    "label": "list to filter",
+                    "call": "Z6830", "name": "Find lexemes for a Wikidata item",
+                    "args": {
+                      "Z6830K1": {"label": "Wikidata item reference", "ref": "concept"},
+                      "Z6830K2": {"label": "Wikidata property reference (P5137 item for this sense)", "literal": "P5137", "type": "Z6092"},
+                      "Z6830K3": {"label": "Natural language", "ref": "language"}
+                    }
+                  },
+                  "Z28316K3": {"label": "second argument (common)", "ref": "name type"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

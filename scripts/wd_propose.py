@@ -279,6 +279,12 @@ def render_ops(proposal: dict, ents: dict, st: Style) -> list[str]:
             val_render = fmt_ref(vs, ents, st) if vs and vs[0] in "QL" and not vs.startswith("{") else st.magenta(vs)
             out.append(f"     {ent_render}  "
                        f"{fmt_ref(op['property'], ents, st)} \u2192 {val_render}")
+        elif op["op"] == "add_qualifier":
+            out.append(f"     {fmt_ref(op['entity'], ents, st)}  on statement "
+                       f"{fmt_ref(op.get('statement_property', '?'), ents, st)} \u2192 "
+                       f"{fmt_ref(op.get('statement_value', '?'), ents, st)}")
+            out.append(f"       + qualifier {fmt_ref(op['property'], ents, st)} \u2192 "
+                       f"{fmt_ref(op['value'], ents, st)}   {st.dim(op['claim'])}")
         elif op["op"] == "add_sense":
             ph = op.get("placeholder_id", "?")
             out.append(f"     target lexeme: {fmt_ref(op['lexeme'], ents, st)}")
@@ -497,6 +503,11 @@ def collect_entity_ids(proposal: dict) -> set[str]:
                 ids.add(op["entity"].split("-")[0] if "-S" in op["entity"] else op["entity"])
             if op.get("value") and op["value"][0] in "QL" and not op["value"].startswith("{"):
                 ids.add(op["value"])
+        elif op["op"] == "add_qualifier":
+            for v in (op.get("entity"), op.get("statement_property"),
+                      op.get("statement_value"), op.get("property"), op.get("value")):
+                if v and v[0] in "PQL":
+                    ids.add(v)
         elif op["op"] in ("update_description", "update_label", "add_alias"):
             if op.get("entity"):
                 ids.add(op["entity"])

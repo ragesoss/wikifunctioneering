@@ -1,0 +1,89 @@
+{
+  "_comment": "Prototype-only mirror of the planned 'sargam to solfege' function with the two not-yet-created predicate helpers inlined as lambda nodes. Run with composition_run.py; the Ruby emitter refuses lambda nodes on purpose.",
+  "expect_args": ["sargam note"],
+  "composition": {
+    "call": "Z27423", "name": "first lemma of lexeme",
+    "args": {
+      "Z27423K1": {
+        "call": "Z6825", "name": "fetch Wikidata lexeme",
+        "args": {
+          "Z6825K1": {
+            "call": "Z811", "name": "first element",
+            "args": {
+              "Z811K1": {
+                "call": "Z28316", "name": "filter with second common element",
+                "args": {
+                  "Z28316K1": {"lambda": {
+                    "_name": "lexeme reference has sense with name type?",
+                    "args": [{"name": "lexeme reference", "type": "Z6095"}, {"name": "name type", "type": "Z6091"}],
+                    "output": "Z40",
+                    "body": {"call": "Z10216", "name": "not", "args": {
+                      "Z10216K1": {"call": "Z813", "name": "Is empty list", "args": {
+                        "Z813K1": {"call": "Z28316", "args": {
+                          "Z28316K1": {"lambda": {
+                            "_name": "lexeme sense has name type?",
+                            "args": [{"name": "sense", "type": "Z6006"}, {"name": "name type", "type": "Z6091"}],
+                            "output": "Z40",
+                            "body": {"call": "Z27340", "args": {
+                              "Z27340K1": {"ref": "sense"},
+                              "Z27340K2": {"literal": "P14792", "type": "Z6092"},
+                              "Z27340K3": {"ref": "name type"}}}
+                          }},
+                          "Z28316K2": {"call": "Z19282", "args": {"Z19282K1": {"call": "Z6825", "args": {"Z6825K1": {"ref": "lexeme reference"}}}}},
+                          "Z28316K3": {"ref": "name type"}}}}}}}
+                  }},
+                  "Z28316K2": {
+                    "call": "Z6830", "name": "Find lexemes for a Wikidata item",
+                    "args": {
+                      "Z6830K1": {
+                        "label": "scale degree",
+                        "call": "Z19308", "name": "value of Wikidata statement",
+                        "args": {
+                          "Z19308K1": {
+                            "call": "Z23680", "name": "best ranked statement from list",
+                            "args": {
+                              "Z23680K1": {
+                                "call": "Z31659", "name": "get property statements with qualifier from item",
+                                "args": {
+                                  "Z31659K1": {
+                                    "call": "Z6821", "name": "Fetch Wikidata item",
+                                    "args": {
+                                      "Z6821K1": {
+                                        "label": "svara",
+                                        "call": "Z21577", "name": "item reference from sense",
+                                        "args": {
+                                          "Z21577K1": {
+                                            "call": "Z41804", "name": "lexeme sense for word in field of usage",
+                                            "args": {
+                                              "Z41804K1": {"ref": "sargam note"},
+                                              "Z41804K2": {"literal": "Z1002", "type": "Z9"},
+                                              "Z41804K3": {"literal": "Q1323698", "type": "Z6091"}
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Z31659K2": {"literal": "P460", "type": "Z6092"},
+                                  "Z31659K3": {"literal": "P3831", "type": "Z6092"},
+                                  "Z31659K4": {"literal": "Q586277", "type": "Z6091"}
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Z6830K2": {"literal": "P5137", "type": "Z6092"},
+                      "Z6830K3": {"literal": "Z1002", "type": "Z9"}
+                    }
+                  },
+                  "Z28316K3": {"literal": "Q141435500", "type": "Z6091"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

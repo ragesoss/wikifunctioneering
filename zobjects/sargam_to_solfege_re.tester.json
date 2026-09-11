@@ -1,0 +1,27 @@
+{
+  "task": "tester",
+  "function_zid": "Z41832",
+  "label": "sargam re -> solfège re",
+  "summary": "Add test covering re -> re (the lexeme L326409 carries both the sargam and the solfège sense)",
+  "test_call": {
+    "call": "Z41832",
+    "args": {
+      "Z41832K1": {
+        "label": "sargam note",
+        "literal": "re",
+        "type": "Z6"
+      }
+    }
+  },
+  "validator": {
+    "call": "Z10539",
+    "name": "case-insensitive string equality",
+    "args": {
+      "Z10539K2": {
+        "label": "expected solfège syllable",
+        "literal": "re",
+        "type": "Z6"
+      }
+    }
+  }
+}

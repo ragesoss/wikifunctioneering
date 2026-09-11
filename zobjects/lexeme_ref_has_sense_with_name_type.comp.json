@@ -1,0 +1,31 @@
+{
+  "function_zid": "Z41827",
+  "label": "via not(is empty(filter senses by has name type?))",
+  "summary": "Add composition: not(is empty list(filter with second common element(lexeme sense has name type?, senses of fetched lexeme, name type)))",
+  "expect_args": ["lexeme reference", "name type"],
+  "composition": {
+    "call": "Z10216", "name": "not",
+    "args": {
+      "Z10216K1": {
+        "label": "value to be negated",
+        "call": "Z813", "name": "Is empty list",
+        "args": {
+          "Z813K1": {
+            "label": "list",
+            "call": "Z28316", "name": "filter with second common element",
+            "args": {
+              "Z28316K1": {"label": "two-argument function", "literal": "Z41819", "type": "Z9"},
+              "Z28316K2": {
+                "label": "list to filter",
+                "call": "Z19282", "name": "list of lexeme senses from lexeme",
+                "args": {"Z19282K1": {"label": "lexeme", "call": "Z6825", "name": "fetch Wikidata lexeme",
+                                      "args": {"Z6825K1": {"label": "Wikidata lexeme reference", "ref": "lexeme reference"}}}}
+              },
+              "Z28316K3": {"label": "second argument (common)", "ref": "name type"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -38,6 +38,9 @@ def emit_shell(spec):
     label = spec['label']
     if len(label) > 50:
         raise ValueError(f'label is {len(label)} chars; Wikifunctions labels must stay under ~50')
+    desc = spec.get('description') or ''
+    if len(desc) > 500:
+        raise ValueError(f'description is {len(desc)} chars; Wikifunctions rejects descriptions over 500')
     args = ['Z17']
     for i, inp in enumerate(spec['inputs'], start=1):
         args.append({'Z1K1': 'Z17', 'Z17K1': inp['type'], 'Z17K2': f'Z0K{i}',

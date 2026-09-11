@@ -1,0 +1,10 @@
+{
+  "task": "tester",
+  "function_zid": "Z41827",
+  "label": "L328069 (so) has a solfège-syllable sense",
+  "summary": "Test: L328069 has a sense with P14792 = Q141435500 -> true",
+  "test_call": {"call": "Z41827", "args": {
+    "Z41827K1": {"literal": "L328069", "type": "Z6095"},
+    "Z41827K2": {"literal": "Q141435500", "type": "Z6091"}}},
+  "validator": {"call": "Z844", "name": "Boolean equality", "args": {"Z844K2": {"literal": "Z41", "type": "Z40"}}}
+}

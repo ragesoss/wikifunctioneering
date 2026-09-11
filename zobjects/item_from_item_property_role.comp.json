@@ -1,0 +1,28 @@
+{
+  "function_zid": "Z41820",
+  "label": "via statements with qualifier P3831, best ranked, value",
+  "summary": "Add composition: value of Wikidata statement(best ranked statement from list(get property statements with qualifier from item(fetch item, property, P3831, object role)))",
+  "expect_args": ["item", "property", "object role"],
+  "composition": {
+    "call": "Z19308", "name": "value of Wikidata statement",
+    "args": {
+      "Z19308K1": {
+        "label": "statement",
+        "call": "Z23680", "name": "best ranked statement from list",
+        "args": {
+          "Z23680K1": {
+            "label": "list of claims",
+            "call": "Z31659", "name": "get property statements with qualifier from item",
+            "args": {
+              "Z31659K1": {"label": "Item", "call": "Z6821", "name": "Fetch Wikidata item",
+                           "args": {"Z6821K1": {"label": "Wikidata item reference", "ref": "item"}}},
+              "Z31659K2": {"label": "Property", "ref": "property"},
+              "Z31659K3": {"label": "Qualifer (P3831 object of statement has role)", "literal": "P3831", "type": "Z6092"},
+              "Z31659K4": {"label": "Qualifier value", "ref": "object role"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

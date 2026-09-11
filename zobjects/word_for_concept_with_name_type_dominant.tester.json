@@ -1,0 +1,34 @@
+{
+  "task": "tester",
+  "function_zid": "Z41831",
+  "label": "dominant, English, solfège syllable -> so or sol",
+  "summary": "Test: the English solfège syllable for Q899391 dominant is 'so' or 'sol' (both are solfège-syllable lexemes; not 'dominant')",
+  "test_call": {
+    "call": "Z41831",
+    "args": {
+      "Z41831K1": {
+        "literal": "Q899391",
+        "type": "Z6091"
+      },
+      "Z41831K2": {
+        "literal": "Z1002",
+        "type": "Z9"
+      },
+      "Z41831K3": {
+        "literal": "Q141435500",
+        "type": "Z6091"
+      }
+    }
+  },
+  "validator": {
+    "call": "Z11094",
+    "name": "string is element of CSV",
+    "args": {
+      "Z11094K2": {
+        "label": "comma-separated value series",
+        "literal": "so,sol",
+        "type": "Z6"
+      }
+    }
+  }
+}

@@ -55,9 +55,19 @@ def summary_create_item(proposal: dict, op: dict) -> str:
     label = op.get("labels", {}).get("en", "?")
     claims = op.get("claims", [])
     claims_str = ", ".join(f"{c['property']}={c['value']}" for c in claims)
+    purpose = op.get("purpose") or "as concept item for Wikifunctions lexeme lookups"
     return (
-        f"Create \u201c{label}\u201d ({claims_str}) as concept item for "
-        f"Wikifunctions Z33668 sense linking. Proposal: {slug}. {AI_DISCLOSURE}"
+        f"Create \u201c{label}\u201d ({claims_str}) {purpose}. "
+        f"Proposal: {slug}. {AI_DISCLOSURE}"
+    )
+
+
+def summary_add_qualifier(proposal: dict, op: dict) -> str:
+    slug = proposal.get("slug", "?")
+    return (
+        f"Add qualifier {op['property']}={op['value']} to {op['entity']} "
+        f"{op.get('statement_property', '?')}={op.get('statement_value', '?')}. "
+        f"Proposal: {slug}. {AI_DISCLOSURE}"
     )
 
 
@@ -140,6 +150,43 @@ def build_add_claim(entity: str, pid: str, qid: str, summary: str) -> dict:
     }
 
 
+def build_add_qualifier(claim_guid: str, pid: str, qid: str, summary: str) -> dict:
+    """wbsetqualifier: add an item-valued qualifier to an existing statement,
+    addressed by its GUID (e.g. Q12416644$dbf00af7-...)."""
+    return {
+        "params": {"action": "wbsetqualifier", "claim": claim_guid,
+                   "property": pid, "snaktype": "value",
+                   "summary": summary, "bot": "0",
+                   "format": "json", "maxlag": "5"},
+        "post": {"value": json.dumps(_entity_value(qid), ensure_ascii=False)},
+    }
+
+
+def check_qualifier_target(op: dict) -> str | None:
+    """Re-read the statement behind `op['claim']` and confirm it is the one
+    the proposal thinks it is (right property and main value) and does not
+    already carry the qualifier. Returns None when fine, else a message."""
+    import urllib.parse
+    from wd_common import _http_get_json
+    from config import WIKIDATA_API
+    params = {"action": "wbgetclaims", "claim": op["claim"], "format": "json"}
+    data = _http_get_json(f"{WIKIDATA_API}?{urllib.parse.urlencode(params)}")
+    claims = [c for cs in data.get("claims", {}).values() for c in cs]
+    if not claims:
+        return f"statement {op['claim']} not found"
+    c = claims[0]
+    prop = c["mainsnak"].get("property")
+    val = (c["mainsnak"].get("datavalue", {}).get("value", {}) or {}).get("id")
+    if op.get("statement_property") and prop != op["statement_property"]:
+        return f"statement is {prop}, expected {op['statement_property']}"
+    if op.get("statement_value") and val != op["statement_value"]:
+        return f"statement value is {val}, expected {op['statement_value']}"
+    for q in c.get("qualifiers", {}).get(op["property"], []):
+        if (q.get("datavalue", {}).get("value", {}) or {}).get("id") == op["value"]:
+            return f"qualifier {op['property']}={op['value']} already present"
+    return None
+
+
 def build_add_sense(lexeme_id: str, glosses: dict, summary: str) -> dict:
     """wbladdsense POST to append a new sense to an existing lexeme.
     Claims on the new sense are added via follow-up wbcreateclaim ops
@@ -207,6 +254,11 @@ def _gather_ref_ids(proposal: dict) -> set[str]:
                     continue
                 if v[0] in "QLP":
                     ids.add(v.split("-")[0] if "-S" in v else v)
+        elif op["op"] == "add_qualifier":
+            for v in (op.get("entity"), op.get("statement_property"),
+                      op.get("statement_value"), op["property"], op["value"]):
+                if v and v[0] in "QLP":
+                    ids.add(v)
     return ids
 
 
@@ -272,6 +324,15 @@ def render_semantic_diff(proposal: dict, ents: dict) -> list[str]:
             out.append(f"Change {i} \u2014 ADD statement")
             out.append(f"  {ent_r}")
             out.append(f"    {pid}  \u2192  {val}")
+
+        elif op["op"] == "add_qualifier":
+            out.append(f"Change {i} \u2014 ADD qualifier")
+            out.append(f"  {_fmt_q_or_placeholder(op['entity'], ents)}")
+            out.append(f"    on statement {_fmt_q_or_placeholder(op.get('statement_property', '?'), ents)}"
+                       f"  \u2192  {_fmt_q_or_placeholder(op.get('statement_value', '?'), ents)}"
+                       f"   [{op['claim']}]")
+            out.append(f"      + {_fmt_q_or_placeholder(op['property'], ents)}"
+                       f"  \u2192  {_fmt_q_or_placeholder(op['value'], ents)}")
 
         else:
             out.append(f"Change {i} \u2014 {op['op']} (unrecognised op kind)")
@@ -410,6 +471,24 @@ def apply_proposal(proposal: dict, path: Path, *, dry_run: bool) -> None:
                                        "claim_id": claim_id})
                     print(f"    \u2713 claim added: {claim_id}")
                     time.sleep(INTER_EDIT_SLEEP)
+        elif op["op"] == "add_qualifier":
+            problem = check_qualifier_target(op)
+            if problem:
+                raise RuntimeError(f"add_qualifier pre-check failed for {op['claim']}: {problem}")
+            print(f"    pre-check ok: {op['claim']} is {op.get('statement_property')}={op.get('statement_value')}, "
+                  f"qualifier not yet present")
+            summary = summary_add_qualifier(proposal, op)
+            req = build_add_qualifier(op["claim"], op["property"], op["value"], summary)
+            print_request(req, prefix="    ")
+            if not dry_run:
+                r = post_with_maxlag_retry(session, req["params"], req["post"])
+                if "error" in r:
+                    raise RuntimeError(f"add_qualifier failed: {r['error']}")
+                op_results.append({"op": "add_qualifier", "entity": op["entity"],
+                                   "claim": op["claim"], "property": op["property"],
+                                   "value": op["value"]})
+                print(f"    \u2713 qualifier added on {op['claim']}")
+                time.sleep(INTER_EDIT_SLEEP)
         else:
             print(f"    (apply not yet implemented for op kind: {op['op']})")
 

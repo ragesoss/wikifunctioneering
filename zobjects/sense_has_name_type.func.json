@@ -1,0 +1,8 @@
+{
+  "task": "function",
+  "label": "lexeme sense has name type?",
+  "description": "Returns true if the lexeme sense has a 'name type' (P14792) statement whose value is the given Wikidata item (e.g. Q7884789 toponym, Q376431 color term, Q141435500 solfège syllable). Wraps Z27340 'lexeme sense has specific statement?' with the predicate fixed to P14792, so it can be used as a two-argument filter predicate.",
+  "inputs": [{"label": "sense", "type": "Z6006"}, {"label": "name type", "type": "Z6091"}],
+  "output_type": "Z40",
+  "summary": "New function: lexeme sense has name type?"
+}

@@ -1,0 +1,8 @@
+{
+  "task": "function",
+  "label": "item from item, property, and object role",
+  "description": "Among the item's statements for the given property, selects the best-ranked one whose 'object of statement has role' (P3831) qualifier equals the given role item, and returns that statement's value as a Wikidata item reference. Use it when a property has several values distinguished by role, e.g. the svara items' 'said to be the same as' (P460) statements to a note name and to a scale degree (role Q586277 degree). Generalises Z31108.",
+  "inputs": [{"label": "item", "type": "Z6091"}, {"label": "property", "type": "Z6092"}, {"label": "object role", "type": "Z6091"}],
+  "output_type": "Z6091",
+  "summary": "New function: item from item, property, and object role"
+}

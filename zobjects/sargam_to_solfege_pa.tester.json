@@ -1,0 +1,27 @@
+{
+  "task": "tester",
+  "function_zid": "Z41832",
+  "label": "pa -> so or sol",
+  "summary": "Add test covering pa -> so/sol (the dominant has two solfège spellings; either is accepted)",
+  "test_call": {
+    "call": "Z41832",
+    "args": {
+      "Z41832K1": {
+        "label": "sargam note",
+        "literal": "pa",
+        "type": "Z6"
+      }
+    }
+  },
+  "validator": {
+    "call": "Z11094",
+    "name": "string is element of CSV",
+    "args": {
+      "Z11094K2": {
+        "label": "comma-separated value series",
+        "literal": "so,sol",
+        "type": "Z6"
+      }
+    }
+  }
+}

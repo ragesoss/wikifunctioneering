@@ -253,6 +253,29 @@ on the new sense should be added as separate `add_claim` ops.
 Adds a statement via `wbcreateclaim`. Both `entity` and `value`
 support placeholders resolved from earlier ops.
 
+### `add_qualifier`
+
+```json
+{
+  "op": "add_qualifier",
+  "entity": "Q12416644",
+  "claim": "Q12416644$dbf00af7-4744-e4fc-a662-57d346a761da",
+  "statement_property": "P460",
+  "statement_value": "Q2482078",
+  "property": "P3831",
+  "value": "Q586277"
+}
+```
+
+Adds an item-valued qualifier to an existing statement via
+`wbsetqualifier`, addressed by the statement GUID (read it from
+`Special:EntityData/<id>.json`, field `id` on the claim). Before posting,
+the apply step re-reads the statement and refuses if its property or main
+value differ from `statement_property` / `statement_value`, or if the
+qualifier is already present — so a GUID copied wrongly cannot land a
+qualifier on the wrong claim. `entity` is informational (for the diff).
+Placeholders are not supported in this op.
+
 ## Probes
 
 `probes` declares context-gathering that the review script should

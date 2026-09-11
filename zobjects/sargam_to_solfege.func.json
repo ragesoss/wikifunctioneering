@@ -1,0 +1,13 @@
+{
+  "task": "function",
+  "label": "sargam to solfege",
+  "description": "Given a note syllable of the Indian sargam solmization system (sa, re, ga, ma, pa, dha, ni), returns the corresponding Western solfège syllable (do, re, mi, fa, so, la, ti). Inverse of Z26184. Entirely Wikidata-driven: the word's sargam sense links to a svara item, which is 'said to be the same as' a scale degree (role: degree), and the English lexeme for that degree whose sense is a solfège syllable supplies the answer. For so/sol the first found is returned.",
+  "inputs": [
+    {
+      "label": "sargam note",
+      "type": "Z6"
+    }
+  ],
+  "output_type": "Z6",
+  "summary": "New function: sargam to solfege"
+}

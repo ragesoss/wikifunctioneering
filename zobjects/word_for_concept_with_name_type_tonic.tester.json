@@ -1,0 +1,11 @@
+{
+  "task": "tester",
+  "function_zid": "Z41831",
+  "label": "tonic, English, solfège syllable -> do",
+  "summary": "Test: the English solfège syllable for Q210411 tonic is 'do' (not 'tonic')",
+  "test_call": {"call": "Z41831", "args": {
+    "Z41831K1": {"literal": "Q210411", "type": "Z6091"},
+    "Z41831K2": {"literal": "Z1002", "type": "Z9"},
+    "Z41831K3": {"literal": "Q141435500", "type": "Z6091"}}},
+  "validator": {"call": "Z866", "name": "string equality", "args": {"Z866K2": {"literal": "do", "type": "Z6"}}}
+}

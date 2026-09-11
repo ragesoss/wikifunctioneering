@@ -1,0 +1,8 @@
+{
+  "task": "function",
+  "label": "lexeme reference has sense with name type?",
+  "description": "Fetches the lexeme behind a Wikidata lexeme reference and returns true if any of its senses has a 'name type' (P14792) statement with the given item as value. Intended as the predicate for filtering a list of lexeme references (for example the output of Z6830) down to, say, toponyms or solfège syllables, so that only references travel through the filter.",
+  "inputs": [{"label": "lexeme reference", "type": "Z6095"}, {"label": "name type", "type": "Z6091"}],
+  "output_type": "Z40",
+  "summary": "New function: lexeme reference has sense with name type?"
+}

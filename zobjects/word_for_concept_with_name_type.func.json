@@ -1,0 +1,8 @@
+{
+  "task": "function",
+  "label": "word for concept with name type",
+  "description": "Returns the first lemma of the first lexeme, in the given language, that has a sense linked to the concept via 'item for this sense' (P5137) and a sense with the given 'name type' (P14792). Lets you ask for the solfège syllable (Q141435500) for a scale degree rather than the theory term for it, or the toponym for a place. Companion to Z33668 'word for concept' and mirror of Z41804 'lexeme sense for word in field of usage'.",
+  "inputs": [{"label": "concept", "type": "Z6091"}, {"label": "language", "type": "Z60"}, {"label": "name type", "type": "Z6091"}],
+  "output_type": "Z6",
+  "summary": "New function: word for concept with name type"
+}

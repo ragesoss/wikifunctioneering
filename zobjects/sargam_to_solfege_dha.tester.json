@@ -1,0 +1,8 @@
+{
+  "task": "tester",
+  "function_zid": "Z41832",
+  "label": "dha -> la",
+  "summary": "Add test covering dha -> la in the sargam/solfege mapping",
+  "test_call": {"call": "Z41832", "args": {"Z41832K1": {"label": "sargam note", "literal": "dha", "type": "Z6"}}},
+  "validator": {"call": "Z10539", "name": "case-insensitive string equality", "args": {"Z10539K2": {"label": "expected solfège syllable", "literal": "la", "type": "Z6"}}}
+}

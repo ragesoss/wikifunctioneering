@@ -1,0 +1,69 @@
+{
+  "function_zid": "Z41832",
+  "label": "via svara role qualifier and solfège name type",
+  "summary": "Add composition: word for concept with name type(item from item, property, and object role(item reference from sense(lexeme sense for word in field of usage(note, English, Indian classical music)), P460, degree), English, solfège syllable)",
+  "expect_args": [
+    "sargam note"
+  ],
+  "composition": {
+    "call": "Z41831",
+    "name": "word for concept with name type",
+    "args": {
+      "Z41831K1": {
+        "label": "concept (scale degree)",
+        "call": "Z41820",
+        "name": "item from item, property, and object role",
+        "args": {
+          "Z41820K1": {
+            "label": "item (svara)",
+            "call": "Z21577",
+            "name": "item reference from sense",
+            "args": {
+              "Z21577K1": {
+                "label": "sense (sargam sense of the input word)",
+                "call": "Z41804",
+                "name": "lexeme sense for word in field of usage",
+                "args": {
+                  "Z41804K1": {
+                    "label": "word",
+                    "ref": "sargam note"
+                  },
+                  "Z41804K2": {
+                    "label": "language (English)",
+                    "literal": "Z1002",
+                    "type": "Z9"
+                  },
+                  "Z41804K3": {
+                    "label": "field of usage (Q1323698 Indian classical music)",
+                    "literal": "Q1323698",
+                    "type": "Z6091"
+                  }
+                }
+              }
+            }
+          },
+          "Z41820K2": {
+            "label": "property (P460 said to be the same as)",
+            "literal": "P460",
+            "type": "Z6092"
+          },
+          "Z41820K3": {
+            "label": "object role (Q586277 degree)",
+            "literal": "Q586277",
+            "type": "Z6091"
+          }
+        }
+      },
+      "Z41831K2": {
+        "label": "language (English)",
+        "literal": "Z1002",
+        "type": "Z9"
+      },
+      "Z41831K3": {
+        "label": "name type (Q141435500 solfège syllable)",
+        "literal": "Q141435500",
+        "type": "Z6091"
+      }
+    }
+  }
+}

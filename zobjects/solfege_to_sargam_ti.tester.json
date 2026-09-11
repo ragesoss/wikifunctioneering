@@ -1,0 +1,14 @@
+{
+  "task": "tester",
+  "function_zid": "Z26184",
+  "label": "ti -> ni",
+  "summary": "Add test covering ti -> ni in the solfege/sargam mapping",
+  "test_call": {
+    "call": "Z26184", "name": "solfege to sargam",
+    "args": {"Z26184K1": {"label": "solfege note", "literal": "ti", "type": "Z6"}}
+  },
+  "validator": {
+    "call": "Z10539", "name": "case-insensitive string equality",
+    "args": {"Z10539K2": {"label": "expected sargam syllable", "literal": "ni", "type": "Z6"}}
+  }
+}

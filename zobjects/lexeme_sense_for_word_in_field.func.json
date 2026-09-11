@@ -1,0 +1,12 @@
+{
+  "task": "function",
+  "label": "lexeme sense for word in field of usage",
+  "description": "String-to-sense lookup driven by Wikidata: among the lexemes in the given language that have a sense with the given 'field of usage' (P9488) item, finds the one whose first lemma is the given word and returns that sense. Built on Z6830 (Wikidata's sense-statement search), so the set of recognised words is whatever Wikidata tags with that field of usage; no word table is hard-coded.",
+  "inputs": [
+    {"label": "word", "type": "Z6"},
+    {"label": "language", "type": "Z60"},
+    {"label": "field of usage", "type": "Z6091"}
+  ],
+  "output_type": "Z6006",
+  "summary": "New function: lexeme sense for word in field of usage"
+}

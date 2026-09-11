@@ -1,0 +1,19 @@
+{
+  "task": "tester",
+  "function_zid": "Z41804",
+  "label": "'do', English, music -> L319652-S2",
+  "summary": "Test: the English music-field sense for 'do' is L319652-S2 (solfège tonic)",
+  "test_call": {
+    "call": "Z41804",
+    "args": {
+      "Z41804K1": {"literal": "do", "type": "Z6"},
+      "Z41804K2": {"literal": "Z1002", "type": "Z9"},
+      "Z41804K3": {"literal": "Q638", "type": "Z6091"}
+    }
+  },
+  "validator": {
+    "call": "Z6806", "name": "same Wikidata lexeme sense",
+    "args": {"Z6806K2": {"call": "Z6826", "name": "Fetch Wikidata lexeme sense",
+                         "args": {"Z6826K1": {"literal": "L319652-S2", "type": "Z6096"}}}}
+  }
+}

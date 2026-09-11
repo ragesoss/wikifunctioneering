@@ -1,0 +1,14 @@
+{
+  "task": "tester",
+  "function_zid": "Z41793",
+  "label": "L319652 (do) has first lemma 'do'",
+  "summary": "Test: L319652 first lemma equals 'do' -> true",
+  "test_call": {
+    "call": "Z41793",
+    "args": {
+      "Z41793K1": {"literal": "L319652", "type": "Z6095"},
+      "Z41793K2": {"literal": "do", "type": "Z6"}
+    }
+  },
+  "validator": {"call": "Z844", "name": "Boolean equality", "args": {"Z844K2": {"literal": "Z41", "type": "Z40"}}}
+}

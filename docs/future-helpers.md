@@ -45,6 +45,19 @@ Z28297: value of claim
 
 ## lexemes by lemma (language, category)
 
+> **Update 2026-09-11 — no longer blocking Z26184.** Z6830 "Find lexemes
+> for a Wikidata item" is a general *sense-statement* search
+> (`haswbstatement:P=Q` over lexemes, sense statements included), so a
+> string→sense lookup can be composed today when the target senses share
+> a sense-level statement such as P9488 "field of usage": search by that
+> statement, filter the returned references by lemma, pick the sense. See
+> `docs/session-notes/2026-09-11-solfege-sargam-via-sense-search.md`; the
+> resulting helper is **Z41804 "lexeme sense for word in field of usage"**
+> (with Z41793 / Z41797 / Z41801 underneath). A true
+> lemma search (below) is still worth having upstream for words with no
+> shared statement; T423781 / MR !339 / MR !643 remain Draft.
+
+
 Platform-level primitive needed to rewrite string→lexeme lookups (like Z29517) as pure compositions instead of hardcoded Python dicts.
 
 **Signature:**

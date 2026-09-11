@@ -1,0 +1,19 @@
+{
+  "task": "tester",
+  "function_zid": "Z41804",
+  "label": "'pa', English, Indian classical music -> L324925-S2",
+  "summary": "Test: the English sense of 'pa' in the field Indian classical music is L324925-S2 (sargam), not the 'father' sense S1",
+  "test_call": {
+    "call": "Z41804",
+    "args": {
+      "Z41804K1": {"literal": "pa", "type": "Z6"},
+      "Z41804K2": {"literal": "Z1002", "type": "Z9"},
+      "Z41804K3": {"literal": "Q1323698", "type": "Z6091"}
+    }
+  },
+  "validator": {
+    "call": "Z6806", "name": "same Wikidata lexeme sense",
+    "args": {"Z6806K2": {"call": "Z6826", "name": "Fetch Wikidata lexeme sense",
+                         "args": {"Z6826K1": {"literal": "L324925-S2", "type": "Z6096"}}}}
+  }
+}

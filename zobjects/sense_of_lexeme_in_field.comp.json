@@ -1,0 +1,24 @@
+{
+  "function_zid": "Z41801",
+  "label": "via filter senses with 'is in field of usage?'",
+  "summary": "Add composition: first element(filter with second common element(is in field of usage?, senses of lexeme, field))",
+  "expect_args": ["lexeme", "field of usage"],
+  "composition": {
+    "call": "Z811", "name": "first element",
+    "args": {
+      "Z811K1": {
+        "label": "list",
+        "call": "Z28316", "name": "filter with second common element",
+        "args": {
+          "Z28316K1": {"label": "two-argument function", "literal": "Z41797", "type": "Z9"},
+          "Z28316K2": {
+            "label": "list to filter",
+            "call": "Z19282", "name": "list of lexeme senses from lexeme",
+            "args": {"Z19282K1": {"label": "lexeme", "ref": "lexeme"}}
+          },
+          "Z28316K3": {"label": "second argument (common)", "ref": "field of usage"}
+        }
+      }
+    }
+  }
+}

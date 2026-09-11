@@ -204,8 +204,43 @@ When claim values and qualifier values come back as Z1 (generic), these function
 | Z33606 | MIDI number of reference note | pitch standard: Z6001 → Integer | Helper: MIDI of a pitch standard's reference note |
 | Z33682 | frequency of MIDI note number | midi note number: Integer, pitch standard: Z6001 → Float64 | Same formula as Z33605, with MIDI provided directly instead of pitch-class + octave |
 
+## Wikidata — Lexeme search and sense selection
+
+Z6830 is not just "item → lexemes via P5137": it runs CirrusSearch
+`inlanguage:<code> haswbstatement:P<pid>=Q<qid>` over the Lexeme namespace
+(limit 500), and Wikidata indexes **sense-level** statements for that
+keyword. So any sense property works as the search key. Filter the
+*references* it returns (fetch inside the predicate); passing a list of
+full lexeme objects through Z28316 crashes the WASM evaluator (Z573).
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z6830 | Find lexemes for a Wikidata item | item ref: Z6091, property: Z6092, language: Z60 → List of Z6095 | Built-in. E.g. `(Q638 music, P9488 field of usage, Z1002)` → the 12 English lexemes with a music-domain sense; `(Q1323698, P9488, Z1002)` → exactly the 7 sargam syllables |
+| Z6831 | Find lexemes for a Wikidata lexeme sense | sense ref: Z6096, property: Z6092, language: Z60 → List of Z6095 | Built-in sibling keyed on a sense reference |
+| Z6825 | fetch Wikidata lexeme | Z6095 → Z6005 | Built-in; orchestrator caches, so repeated fetches inside a filter predicate are cheap |
+| Z6826 | Fetch Wikidata lexeme sense | Z6096 → Z6006 | Built-in |
+| Z19282 | list of lexeme senses from lexeme | Z6005 → List of Z6006 | Z6005K6 accessor |
+| Z27340 | lexeme sense has specific statement? | sense: Z6006, predicate: Z6092, value: Z1 → Boolean | Deep-equal on the statement value; pass a `Z6091` object as value for item-valued properties |
+| Z27292 | lexeme sense referring to item | lexeme: Z6005, item: Z6091 → Z6006 | First sense linked to the item via P5137 / P9970 / P6271 (errors otherwise) |
+| Z21577 | item reference from sense | Z6006 → Z6091 | P5137 value of the sense |
+| Z23112 / Z23433 | reference of lexeme sense / lexeme reference of lexeme sense | Z6006 → Z6096 / Z6095 | Accessors |
+| Z27423 | first lemma of lexeme | Z6005 → String | First Z11 of Z6005K2 |
+| Z19293 | lemmas of lexeme | Z6005 → Z12 | All lemmas; combine with Z30972 "multilingual text includes string" (Z12, Z6 → Boolean) — but that path hit Z530 for one input in testing |
+| Z28316 | filter with second common element | fn: Z8 (T, U → Boolean), List of T, U → List of T | The general filter; keep T small (references, not fetched entities) |
+
+Helpers built on these (created 2026-09-11; specs in `zobjects/`, design in
+`docs/session-notes/2026-09-11-solfege-sargam-via-sense-search.md`):
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z41793 | first lemma of lexeme reference equals string? | lexeme reference: Z6095, string: Z6 → Boolean | `Z866(Z27423(Z6825(ref)), string)`; the Z28316 predicate for filtering Z6830 results by lemma at reference level |
+| Z41797 | lexeme sense is in field of usage? | sense: Z6006, field of usage: Z6091 → Boolean | Z27340 with the predicate fixed to P9488 |
+| Z41801 | lexeme sense in field of usage | lexeme: Z6005, field of usage: Z6091 → Z6006 | `Z811(Z28316(Z41797, Z19282(lexeme), field))`; picks e.g. the music sense of "re" over its sargam sense |
+| Z41804 | lexeme sense for word in field of usage | word: Z6, language: Z60, field of usage: Z6091 → Z6006 | **String → sense lookup with no word table:** `Z41801(Z6825(Z811(Z28316(Z41793, Z6830(field, P9488, language), word))), field)` |
+
 ## Lexemes / Wikidata-grounded text (user-created)
 
 | ZID | Name | Signature | Notes |
 |-----|------|-----------|-------|
 | Z33668 | word for concept | concept: Z6091, language: Z60, lexical category: Z6091 → String | Looks up the best-ranked lexeme whose `item for this sense` (P5137) points at the concept, and returns its lemma. Wraps Z33071 + Z21806.
+| Z26184 | solfege to sargam | solfege note: String → String | Implementation Z41808 is pure composition with no syllable table: `Z33668(Z28787(Z21577(Z41804(note, English, Q638 music)), P460), English, Q1084 noun)`. The earlier Z33678 reaches the hard-coded Z29515.

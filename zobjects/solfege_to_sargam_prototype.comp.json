@@ -1,0 +1,79 @@
+{
+  "_comment": "Prototype-only mirror of solfege_to_sargam_v2.comp.json with the four not-yet-created helpers inlined as lambda nodes. Run with composition_run.py; the Ruby emitter refuses lambda nodes on purpose.",
+  "function_zid": "Z26184",
+  "expect_args": ["solfege note"],
+  "composition": {
+    "call": "Z33668", "name": "word for concept",
+    "args": {
+      "Z33668K1": {
+        "call": "Z28787", "name": "item from item and property (references)",
+        "args": {
+          "Z28787K1": {
+            "call": "Z21577", "name": "item reference from sense",
+            "args": {
+              "Z21577K1": {
+                "call": "Z811", "name": "first element",
+                "args": {
+                  "Z811K1": {
+                    "call": "Z28316", "name": "filter with second common element",
+                    "args": {
+                      "Z28316K1": {"lambda": {
+                        "args": [{"name": "sense", "type": "Z6006"}, {"name": "field of usage", "type": "Z6091"}],
+                        "output": "Z40",
+                        "body": {"call": "Z27340", "args": {
+                          "Z27340K1": {"ref": "sense"},
+                          "Z27340K2": {"literal": "P9488", "type": "Z6092"},
+                          "Z27340K3": {"ref": "field of usage"}}}
+                      }},
+                      "Z28316K2": {
+                        "call": "Z19282", "name": "list of lexeme senses from lexeme",
+                        "args": {
+                          "Z19282K1": {
+                            "call": "Z6825", "name": "fetch Wikidata lexeme",
+                            "args": {
+                              "Z6825K1": {
+                                "call": "Z811", "name": "first element",
+                                "args": {
+                                  "Z811K1": {
+                                    "call": "Z28316", "name": "filter with second common element",
+                                    "args": {
+                                      "Z28316K1": {"lambda": {
+                                        "args": [{"name": "lexeme reference", "type": "Z6095"}, {"name": "string", "type": "Z6"}],
+                                        "output": "Z40",
+                                        "body": {"call": "Z866", "args": {
+                                          "Z866K1": {"call": "Z27423", "args": {
+                                            "Z27423K1": {"call": "Z6825", "args": {"Z6825K1": {"ref": "lexeme reference"}}}}},
+                                          "Z866K2": {"ref": "string"}}}
+                                      }},
+                                      "Z28316K2": {
+                                        "call": "Z6830", "name": "Find lexemes for a Wikidata item",
+                                        "args": {
+                                          "Z6830K1": {"literal": "Q638", "type": "Z6091"},
+                                          "Z6830K2": {"literal": "P9488", "type": "Z6092"},
+                                          "Z6830K3": {"literal": "Z1002", "type": "Z9"}
+                                        }
+                                      },
+                                      "Z28316K3": {"ref": "solfege note"}
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Z28316K3": {"literal": "Q638", "type": "Z6091"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "Z28787K2": {"literal": "P460", "type": "Z6092"}
+        }
+      },
+      "Z33668K2": {"literal": "Z1002", "type": "Z9"},
+      "Z33668K3": {"literal": "Q1084", "type": "Z6091"}
+    }
+  }
+}

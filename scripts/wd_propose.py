@@ -325,6 +325,8 @@ def render_related_followups(proposal: dict, st: Style) -> list[str]:
     out = [f"{st.bold('Potential follow-up proposals')} "
            f"{st.dim('(notes for later; not part of this proposal)')}"]
     for it in items:
+        if isinstance(it, str):          # plain-string follow-up note
+            it = {"summary": it}
         out.append("")
         out.append(f"  \u2022 {st.bold(it.get('summary', '?'))}")
         if it.get("entities"):

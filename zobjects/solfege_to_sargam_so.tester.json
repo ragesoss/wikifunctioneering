@@ -1,0 +1,14 @@
+{
+  "task": "tester",
+  "function_zid": "Z26184",
+  "label": "so -> pa",
+  "summary": "Add test covering so -> pa in the solfege/sargam mapping",
+  "test_call": {
+    "call": "Z26184", "name": "solfege to sargam",
+    "args": {"Z26184K1": {"label": "solfege note", "literal": "so", "type": "Z6"}}
+  },
+  "validator": {
+    "call": "Z10539", "name": "case-insensitive string equality",
+    "args": {"Z10539K2": {"label": "expected sargam syllable", "literal": "pa", "type": "Z6"}}
+  }
+}

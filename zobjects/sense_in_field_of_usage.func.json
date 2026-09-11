@@ -1,0 +1,11 @@
+{
+  "task": "function",
+  "label": "lexeme sense is in field of usage?",
+  "description": "Returns true if the lexeme sense has a 'field of usage' (P9488) statement whose value is the given Wikidata item. Wraps Z27340 'lexeme sense has specific statement?' with the predicate fixed to P9488, so it can be used as a two-argument filter predicate.",
+  "inputs": [
+    {"label": "sense", "type": "Z6006"},
+    {"label": "field of usage", "type": "Z6091"}
+  ],
+  "output_type": "Z40",
+  "summary": "New function: lexeme sense is in field of usage?"
+}

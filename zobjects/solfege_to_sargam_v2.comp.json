@@ -1,0 +1,65 @@
+{
+  "function_zid": "Z26184",
+  "implementation_zid": "Z41808",
+  "label": "via Wikidata sense search, no syllable table",
+  "summary": "Add composition: word for concept(item from item and property(item reference from sense(lexeme sense for word in field of usage(note, English, music)), P460), English, noun). Replaces the hard-coded syllable dict (Z29515) with Wikidata's sense-statement search.",
+  "expect_args": [
+    "solfege note"
+  ],
+  "composition": {
+    "call": "Z33668",
+    "name": "word for concept",
+    "args": {
+      "Z33668K1": {
+        "label": "concept (svara item)",
+        "call": "Z28787",
+        "name": "item from item and property (references)",
+        "args": {
+          "Z28787K1": {
+            "label": "item (scale degree)",
+            "call": "Z21577",
+            "name": "item reference from sense",
+            "args": {
+              "Z21577K1": {
+                "label": "sense (solfège sense of the input word)",
+                "call": "Z41804",
+                "name": "lexeme sense for word in field of usage",
+                "args": {
+                  "Z41804K1": {
+                    "label": "word",
+                    "ref": "solfege note"
+                  },
+                  "Z41804K2": {
+                    "label": "language (English)",
+                    "literal": "Z1002",
+                    "type": "Z9"
+                  },
+                  "Z41804K3": {
+                    "label": "field of usage (Q638 music)",
+                    "literal": "Q638",
+                    "type": "Z6091"
+                  }
+                }
+              }
+            }
+          },
+          "Z28787K2": {
+            "label": "property (P460 said to be the same as)",
+            "literal": "P460",
+            "type": "Z6092"
+          }
+        }
+      },
+      "Z33668K2": {
+        "label": "language (English)",
+        "literal": "Z1002",
+        "type": "Z9"
+      },
+      "Z33668K3": {
+        "label": "lexical category (Q1084 noun)",
+        "literal": "Q1084",
+        "type": "Z6091"
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "task": "tester",
+  "function_zid": "Z41797",
+  "label": "L319652-S2 (do, solfège) is in field music",
+  "summary": "Test: L319652-S2 has P9488 = Q638 (music) -> true",
+  "test_call": {
+    "call": "Z41797",
+    "args": {
+      "Z41797K1": {"call": "Z6826", "name": "Fetch Wikidata lexeme sense",
+                                "args": {"Z6826K1": {"literal": "L319652-S2", "type": "Z6096"}}},
+      "Z41797K2": {"literal": "Q638", "type": "Z6091"}
+    }
+  },
+  "validator": {"call": "Z844", "name": "Boolean equality", "args": {"Z844K2": {"literal": "Z41", "type": "Z40"}}}
+}

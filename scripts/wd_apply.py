@@ -35,7 +35,10 @@ from pathlib import Path
 
 PROPOSALS_DIR = Path(__file__).parent.parent / "proposals"
 
-AI_DISCLOSURE = "Edit drafted with AI assistance (Claude Opus 4.7)."
+# Disclosure string comes from .env's AI_DISCLOSURE template with {model}
+# filled from CLAUDE_MODEL / AI_MODEL (see scripts/config.py) — never
+# hardcode a model version here.
+from config import AI_DISCLOSURE  # noqa: E402
 INTER_EDIT_SLEEP = 2.0
 MAXLAG_MAX_RETRIES = 4
 MAXLAG_RETRY_WAIT = 12.0  # seconds; doubles each retry

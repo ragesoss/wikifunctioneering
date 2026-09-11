@@ -1,0 +1,23 @@
+{
+  "function_zid": "Z41793",
+  "label": "via fetch lexeme, first lemma, string equality",
+  "summary": "Add composition: string equality(first lemma of lexeme(fetch lexeme(reference)), string)",
+  "expect_args": ["lexeme reference", "string"],
+  "composition": {
+    "call": "Z866", "name": "string equality",
+    "args": {
+      "Z866K1": {
+        "label": "first string",
+        "call": "Z27423", "name": "first lemma of lexeme",
+        "args": {
+          "Z27423K1": {
+            "label": "lexeme",
+            "call": "Z6825", "name": "fetch Wikidata lexeme",
+            "args": {"Z6825K1": {"label": "Wikidata lexeme reference", "ref": "lexeme reference"}}
+          }
+        }
+      },
+      "Z866K2": {"label": "second string", "ref": "string"}
+    }
+  }
+}

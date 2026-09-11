@@ -1,0 +1,19 @@
+{
+  "task": "tester",
+  "function_zid": "Z41801",
+  "label": "L326409 (re): music sense is S2, not sargam S1",
+  "summary": "Test: music-field sense of L326409 is L326409-S2 (the solfège sense), skipping the sargam sense S1",
+  "test_call": {
+    "call": "Z41801",
+    "args": {
+      "Z41801K1": {"call": "Z6825", "name": "fetch Wikidata lexeme",
+                                 "args": {"Z6825K1": {"literal": "L326409", "type": "Z6095"}}},
+      "Z41801K2": {"literal": "Q638", "type": "Z6091"}
+    }
+  },
+  "validator": {
+    "call": "Z6806", "name": "same Wikidata lexeme sense",
+    "args": {"Z6806K2": {"call": "Z6826", "name": "Fetch Wikidata lexeme sense",
+                         "args": {"Z6826K1": {"literal": "L326409-S2", "type": "Z6096"}}}}
+  }
+}

@@ -22,6 +22,12 @@ Input format (same as composition_debug.py):
     - fetch item: {"fetch": "Q2610210"}
     - typed ref: {"ref": "Z6092", "value": "P361"}
     - raw ZObject: {"Z1K1": "Z6001", ...}
+
+Composition nodes: {"call": ...}, {"ref": ...}, {"literal": ..., "type": ...}
+plus, for prototyping only, {"lambda": {"args": [...], "output": "Z40",
+"body": ...}} — an inline anonymous function, so a design that needs a
+helper predicate that doesn't exist on-wiki yet can still be run end to
+end (see build_lambda). Replace lambdas with real helpers before publishing.
 """
 
 import argparse
@@ -74,16 +80,61 @@ def encode_input(value):
     raise ValueError(f"Don't know how to encode: {value}")
 
 
-def build_call(node, inputs):
-    """Recursively build a Z7 function call from a composition node."""
+_LAMBDA_IDS = iter(f'Z9999{n:04d}' for n in range(1, 10000))
+
+
+def build_lambda(spec, inputs, scope):
+    """Build an anonymous, inline Z8 so a composition can be prototyped
+    before its helper predicates exist on-wiki.  Spec node:
+
+        {"lambda": {"args": [{"name": "lexeme reference", "type": "Z6095"},
+                             {"name": "string", "type": "Z6"}],
+                    "output": "Z40",
+                    "body": <node; {"ref": "<arg name>"} refers to a lambda arg>}}
+
+    The Z8 gets a fake identity ZID (Z9999xxxx).  The orchestrator uses a
+    literal Z8 as-is, so the ZID only has to look like a ZID and be unique
+    within the call ("Z0" is rejected).  Lambda nodes are prototype-only:
+    the Ruby emitter refuses them, so replace each with a real helper
+    function before publishing.
+    """
+    fid = next(_LAMBDA_IDS)
+    keys = {a['name']: f'{fid}K{i + 1}' for i, a in enumerate(spec['args'])}
+    inner = dict(scope)
+    inner.update(keys)
+    label = {'Z1K1': 'Z12', 'Z12K1': ['Z11']}
+    return {
+        'Z1K1': 'Z8',
+        'Z8K1': ['Z17'] + [
+            {'Z1K1': 'Z17', 'Z17K1': a['type'], 'Z17K2': keys[a['name']], 'Z17K3': label}
+            for a in spec['args']
+        ],
+        'Z8K2': spec['output'],
+        'Z8K3': ['Z20'],
+        'Z8K4': ['Z14', {'Z1K1': 'Z14', 'Z14K1': fid,
+                         'Z14K2': build_call(spec['body'], inputs, inner)}],
+        'Z8K5': fid,
+    }
+
+
+def build_call(node, inputs, scope=None):
+    """Recursively build a Z7 function call from a composition node.
+
+    `scope` maps lambda argument names to Z18 keys while inside a lambda body.
+    """
+    scope = scope or {}
+    if 'lambda' in node:
+        return build_lambda(node['lambda'], inputs, scope)
     if 'call' in node:
         zid = node['call']
         call = {'Z1K1': 'Z7', 'Z7K1': zid}
         for arg_key, arg_node in (node.get('args') or {}).items():
-            call[arg_key] = build_call(arg_node, inputs)
+            call[arg_key] = build_call(arg_node, inputs, scope)
         return call
     if 'ref' in node:
         ref_name = node['ref']
+        if ref_name in scope:
+            return {'Z1K1': 'Z18', 'Z18K1': scope[ref_name]}
         if ref_name not in inputs:
             raise ValueError(f"Missing test input for argument reference '{ref_name}'")
         return encode_input(inputs[ref_name])
@@ -118,6 +169,8 @@ def format_result(result):
         return val.get('Z6091K1', '?')
     if t == 'Z6092':
         return val.get('Z6092K1', '?')
+    if t in ('Z6095', 'Z6096', 'Z60'):   # lexeme ref, sense ref, language code
+        return val.get(f'{t}K1', '?')
 
     # For numeric types, convert via API using Z25073 (integer to string)
     # or Z20923 (float64 to string)

@@ -1,0 +1,41 @@
+{
+  "function_zid": "Z41804",
+  "label": "via Z6830 sense-statement search, lemma filter",
+  "summary": "Add composition: sense in field(fetch lexeme(first(filter(first lemma equals?, Z6830(field, P9488, language), word))), field)",
+  "expect_args": ["word", "language", "field of usage"],
+  "composition": {
+    "call": "Z41801", "name": "lexeme sense in field of usage",
+    "args": {
+      "Z41801K1": {
+        "label": "lexeme",
+        "call": "Z6825", "name": "fetch Wikidata lexeme",
+        "args": {
+          "Z6825K1": {
+            "label": "Wikidata lexeme reference",
+            "call": "Z811", "name": "first element",
+            "args": {
+              "Z811K1": {
+                "label": "list",
+                "call": "Z28316", "name": "filter with second common element",
+                "args": {
+                  "Z28316K1": {"label": "two-argument function", "literal": "Z41793", "type": "Z9"},
+                  "Z28316K2": {
+                    "label": "list to filter",
+                    "call": "Z6830", "name": "Find lexemes for a Wikidata item",
+                    "args": {
+                      "Z6830K1": {"label": "Wikidata item reference", "ref": "field of usage"},
+                      "Z6830K2": {"label": "Wikidata property reference (P9488 field of usage)", "literal": "P9488", "type": "Z6092"},
+                      "Z6830K3": {"label": "Natural language", "ref": "language"}
+                    }
+                  },
+                  "Z28316K3": {"label": "second argument (common)", "ref": "word"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "Z41801K2": {"label": "field of usage", "ref": "field of usage"}
+    }
+  }
+}

@@ -35,6 +35,10 @@ module WfZObjectEmitter
       emit_list(node, function_zid: function_zid, api_info: api_info)
     elsif node.key?('literal')
       emit_literal(node)
+    elsif node['lambda']
+      raise 'wf_zobject_emitter: {"lambda": ...} nodes are prototype-only ' \
+            '(composition_run.py / composition_debug.py). Create the helper ' \
+            'function on-wiki and reference it with {"call": ...} or a Z9 literal.'
     else
       raise "wf_zobject_emitter: node has no call/ref/literal/list key: #{node.inspect}"
     end
@@ -101,7 +105,10 @@ module WfZObjectEmitter
       # Canonical form stores Z9 references as bare strings (this is what
       # we observe in the ?action=raw body).
       value.to_s
-    when 'Z6091', 'Z6092'
+    when 'Z6091', 'Z6092', 'Z6095', 'Z6096', 'Z40'
+      # Wikidata item / property / lexeme / lexeme-sense references and
+      # Boolean all share the {Z1K1: T, TK1: value} shape (Z40K1 is the
+      # Z41 / Z42 reference).
       { 'Z1K1' => type, "#{type}K1" => value.to_s }
     when 'Z13518'
       { 'Z1K1' => 'Z13518', 'Z13518K1' => value.to_s }

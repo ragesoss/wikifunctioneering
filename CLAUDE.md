@@ -113,6 +113,18 @@ python scripts/composition_run.py zobjects/my.comp.json --inputs '...' --dry-run
 
 Input values: strings (`"C"`), integers (`4`), Wikidata items (`{"fetch": "Q12345"}`), typed references (`{"ref": "Z6092", "value": "P361"}`).
 
+If the design needs a helper that doesn't exist on-wiki yet (typically a
+two-argument predicate for Z28316), don't create it just to test: use a
+prototype-only `{"lambda": {"args": [...], "output": "Z40", "body": ...}}`
+node in the spec (see `composition_run.py`), validate end to end, then
+replace each lambda with a real helper. The Ruby emitter refuses lambda
+nodes so they can't leak into a publish.
+
+When a composition filters or maps over Wikidata entities, keep
+*references* (Z6091/Z6095/Z6096) in the list and fetch inside the
+predicate. Carrying a list of full lexemes/items through recursive list
+helpers crashes the evaluator (Z573 "WASM interpreter aborted").
+
 Iterate on the composition tree until all test cases produce correct results. Only then proceed to creating on-wiki.
 
 ### 8. Build on-wiki
@@ -155,9 +167,18 @@ python scripts/wikifunctions_edit.py update Z#### --file obj.json --summary "...
   argument labels to resolve `{"ref": "..."}` nodes, so the `.comp.json`
   / `.tester.json` specs are identical across both paths.
 - **Two things the token still can't do:**
-  - **Function shells** aren't emitted by `wf_emit_zobject.rb` yet —
-    create those via the browser path below (or hand-build the Z8 JSON
-    for `wikifunctions_edit.py create`).
+  - **Function shells:** emit them from the same `.func.json` spec with
+    `python scripts/wf_emit_function_shell.py zobjects/x.func.json`
+    (pipe into `wikifunctions_edit.py create`). Then create the
+    composition and testers. **Connecting them is manual even for a
+    brand-new function:** an `update` of the Z8 that fills `Z8K4` or
+    `Z8K3` is refused with Z557 "You don't have permission to connect
+    an Implementation to its Function so it can be run" / "...connect a
+    Test Case to its Function" (confirmed 2026-09-11 on Z41793, which
+    had nothing connected). Ask the user to toggle on the function page.
+    You *can* still validate before that with
+    `action=wikilambda_perform_test` (see step 8 notes below), which
+    runs disconnected testers against a disconnected implementation.
   - **Connecting** (see the connected-toggle note below) requires editing
     a function that has a connected implementation, which the token is
     denied. It's a manual step on the function page either way.
@@ -255,13 +276,31 @@ by hand:
 paths).** New Z14 implementations and new Z20 testers land
 *disconnected* — absent from `Z8K4`/`Z8K3`, so the runtime returns
 `Z503`. Connecting means editing the function's `Z8K3`/`Z8K4`, and the
-OAuth token is **denied** that edit once the function has any connected
-implementation (`"You don't have permission to edit Function that has a
-connected Implementation"`). So the user must toggle connected on the
-function page in their own browser session — the API can't do it. The
+OAuth token is **denied** that edit in every case: on a function with a
+connected implementation (`"You don't have permission to edit Function
+that has a connected Implementation"`) and on a fresh one with nothing
+connected (`"You don't have permission to connect an Implementation to
+its Function so it can be run"`, `"...connect a Test Case to its
+Function"`). So the user must toggle connected on the function page in
+their own browser session — the API can't do it.
+
+Before asking for the toggle, run the testers against the disconnected
+implementation with the test API — it does not need anything connected:
+```bash
+curl -s -G "https://www.wikifunctions.org/w/api.php" \
+  --data-urlencode action=wikilambda_perform_test --data-urlencode format=json \
+  --data-urlencode wikilambda_perform_test_zfunction=Z41793 \
+  --data-urlencode wikilambda_perform_test_zimplementations=Z41794 \
+  --data-urlencode "wikilambda_perform_test_ztesters=Z41795|Z41796"
+```
+Each result's `validateStatus` is a JSON-encoded Z40: `{"Z1K1":"Z40","Z40K1":"Z41"}` on pass, `Z42` on fail.
+Run it a minute after creating the objects — immediately afterwards it can
+report every tester false while the new pages propagate. The
 `wf.rb` toolkit blocks after publish until this happens (up to 24h); when
-you create via the API, poll `Z8K3`/`Z8K4` (`?action=raw`) and ask the
-user to toggle. Don't report a task as done until the toggle completes.
+you create via the API, poll `Z8K3`/`Z8K4` and ask the user to toggle.
+Poll with `action=query&prop=revisions&rvprop=content&rvslots=main`, not
+`?action=raw`, which can serve a stale copy for minutes after the toggle.
+Don't report a task as done until the toggle completes.
 
 **Operational notes:**
 - Persistent Chrome profile at `.browser-profile/` keeps you logged in

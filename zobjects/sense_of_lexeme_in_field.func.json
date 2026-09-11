@@ -1,0 +1,11 @@
+{
+  "task": "function",
+  "label": "lexeme sense in field of usage",
+  "description": "Returns the first sense of the lexeme that has a 'field of usage' (P9488) statement pointing at the given Wikidata item. Errors if no sense matches. Use it to pick, for example, the music sense of a word that also has everyday senses.",
+  "inputs": [
+    {"label": "lexeme", "type": "Z6005"},
+    {"label": "field of usage", "type": "Z6091"}
+  ],
+  "output_type": "Z6006",
+  "summary": "New function: lexeme sense in field of usage"
+}

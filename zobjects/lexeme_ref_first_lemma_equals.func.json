@@ -1,0 +1,11 @@
+{
+  "task": "function",
+  "label": "first lemma of lexeme reference equals string?",
+  "description": "Fetches the lexeme behind a Wikidata lexeme reference and returns true if its first lemma is exactly the given string. Intended as the predicate for filtering a list of lexeme references (for example the output of Z6830 'Find lexemes for a Wikidata item') by lemma, so that only references, not full lexeme objects, travel through the filter.",
+  "inputs": [
+    {"label": "lexeme reference", "type": "Z6095"},
+    {"label": "string", "type": "Z6"}
+  ],
+  "output_type": "Z40",
+  "summary": "New function: first lemma of lexeme reference equals string?"
+}

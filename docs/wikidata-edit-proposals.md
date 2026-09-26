@@ -253,6 +253,10 @@ on the new sense should be added as separate `add_claim` ops.
 Adds a statement via `wbcreateclaim`. Both `entity` and `value`
 support placeholders resolved from earlier ops.
 
+For string and external-identifier properties (e.g. P2908
+SecondHandSongs work ID), add `"value_type": "string"` and the value
+is posted verbatim instead of as an item reference.
+
 ### `add_qualifier`
 
 ```json
@@ -301,8 +305,16 @@ python scripts/wd_propose.py --slug <slug> --full
 
 - Every write includes `maxlag=5` — stand Wikidata back-pressure
   signal, respected by default.
-- Writes retry with exponential backoff (4 attempts starting at 12s)
-  when the API returns `maxlag`.
+- Writes retry with exponential backoff (starting at 12s, capped at
+  60s, ~15 minutes in all) when the API returns `maxlag`. Query-service
+  lag often hovers around 5–8s for stretches; `--maxlag N` raises the
+  threshold for a small supervised batch, but waiting is usually enough.
+- `add_claim` checks whether the entity already has that statement and
+  skips it if so, so rerunning a proposal after a partial failure is
+  safe.
+- Auth: a Wikidata bot password (`WD_BOT_USERNAME`/`WD_BOT_PASSWORD`)
+  if set, otherwise the Wikimedia OAuth 2 token `WF_OAUTH_TOKEN`, which
+  edits as the owner's own account.
 - We sleep 2s between ops within a proposal.
 - All of this works without the "high-volume editing" bot-password
   grant.

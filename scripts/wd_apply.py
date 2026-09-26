@@ -40,8 +40,10 @@ PROPOSALS_DIR = Path(__file__).parent.parent / "proposals"
 # hardcode a model version here.
 from config import AI_DISCLOSURE  # noqa: E402
 INTER_EDIT_SLEEP = 2.0
-MAXLAG_MAX_RETRIES = 4
-MAXLAG_RETRY_WAIT = 12.0  # seconds; doubles each retry
+MAXLAG = "5"               # overridable with --maxlag
+MAXLAG_MAX_RETRIES = 16
+MAXLAG_RETRY_WAIT = 12.0   # seconds; doubles each retry...
+MAXLAG_RETRY_WAIT_CAP = 60.0  # ...up to this, so ~15 min of patience in all
 
 _PLACEHOLDER_RE = re.compile(r"\{([A-Z][A-Z0-9_]*)\}")
 
@@ -140,13 +142,17 @@ def build_create_item(op: dict, summary: str) -> dict:
     }
 
 
-def build_add_claim(entity: str, pid: str, qid: str, summary: str) -> dict:
+def build_add_claim(entity: str, pid: str, value: str, summary: str,
+                    value_type: str = "item") -> dict:
+    """value_type "item" takes a Q-ID; "string" posts the value verbatim
+    (string and external-id properties)."""
+    datavalue = value if value_type == "string" else _entity_value(value)
     return {
         "params": {"action": "wbcreateclaim", "entity": entity,
                    "property": pid, "snaktype": "value",
                    "summary": summary, "bot": "0",
                    "format": "json", "maxlag": "5"},
-        "post": {"value": json.dumps(_entity_value(qid), ensure_ascii=False)},
+        "post": {"value": json.dumps(datavalue, ensure_ascii=False)},
     }
 
 
@@ -160,6 +166,18 @@ def build_add_qualifier(claim_guid: str, pid: str, qid: str, summary: str) -> di
                    "format": "json", "maxlag": "5"},
         "post": {"value": json.dumps(_entity_value(qid), ensure_ascii=False)},
     }
+
+
+def claim_exists(entity: str, pid: str, value: str, value_type: str) -> bool:
+    """True if `entity` already has a `pid` statement with this main value,
+    so reruns after a partial apply don't create duplicate statements."""
+    from wd_common import wbgetentities
+    claims = wbgetentities([entity], props="claims").get(entity, {}).get("claims", {})
+    for c in claims.get(pid, []):
+        v = c["mainsnak"].get("datavalue", {}).get("value")
+        if (v if value_type == "string" else (v or {}).get("id")) == value:
+            return True
+    return False
 
 
 def check_qualifier_target(op: dict) -> str | None:
@@ -217,6 +235,7 @@ def post_with_maxlag_retry(session, params: dict, post: dict) -> dict:
     maxlag is Wikidata's standard backpressure signal \u2014 when the cluster is
     behind, polite clients wait and retry rather than hammering."""
     wait = MAXLAG_RETRY_WAIT
+    params = {**params, "maxlag": MAXLAG}
     for attempt in range(1, MAXLAG_MAX_RETRIES + 1):
         r = session._write(params, post)
         err = r.get("error")
@@ -225,7 +244,7 @@ def post_with_maxlag_retry(session, params: dict, post: dict) -> dict:
             print(f"    (maxlag: {lag}s lagged; waiting {wait:.0f}s then retrying, "
                   f"attempt {attempt}/{MAXLAG_MAX_RETRIES})")
             time.sleep(wait)
-            wait *= 2
+            wait = min(wait * 2, MAXLAG_RETRY_WAIT_CAP)
             continue
         return r
     raise RuntimeError(f"Gave up after {MAXLAG_MAX_RETRIES} maxlag retries; Wikidata cluster backed up. Try again later.")
@@ -249,7 +268,8 @@ def _gather_ref_ids(proposal: dict) -> set[str]:
             ids.add(op["lexeme"])
         elif op["op"] == "add_claim":
             ids.add(op["property"])
-            for v in (op["entity"], op["value"]):
+            vals = [op["entity"]] if op.get("value_type") == "string" else [op["entity"], op["value"]]
+            for v in vals:
                 if not v or v.startswith("{"):
                     continue
                 if v[0] in "QLP":
@@ -319,7 +339,8 @@ def render_semantic_diff(proposal: dict, ents: dict) -> list[str]:
         elif op["op"] == "add_claim":
             ent = op["entity"]
             pid = _fmt_q_or_placeholder(op["property"], ents)
-            val = _fmt_q_or_placeholder(op["value"], ents)
+            val = (f"\u201c{op['value']}\u201d" if op.get("value_type") == "string"
+                   else _fmt_q_or_placeholder(op["value"], ents))
             ent_r = _fmt_q_or_placeholder(ent, ents)
             out.append(f"Change {i} \u2014 ADD statement")
             out.append(f"  {ent_r}")
@@ -459,9 +480,17 @@ def apply_proposal(proposal: dict, path: Path, *, dry_run: bool) -> None:
                 resolved_entity = resolve_placeholders(raw_entity, placeholder_env)
                 resolved_value = resolve_placeholders(raw_value, placeholder_env)
                 summary = summary_add_claim(proposal, op, resolved_value, resolved_entity)
-                req = build_add_claim(resolved_entity, op["property"], resolved_value, summary)
+                value_type = op.get("value_type", "item")
+                req = build_add_claim(resolved_entity, op["property"], resolved_value, summary,
+                                      value_type)
                 print_request(req, prefix="    ")
-                if not dry_run:
+                if not dry_run and claim_exists(resolved_entity, op["property"],
+                                                resolved_value, value_type):
+                    print(f"    = already present on {resolved_entity}; skipping")
+                    op_results.append({"op": "add_claim", "entity": resolved_entity,
+                                       "property": op["property"], "value": resolved_value,
+                                       "skipped": "already present"})
+                elif not dry_run:
                     r = post_with_maxlag_retry(session, req["params"], req["post"])
                     if "error" in r:
                         raise RuntimeError(f"add_claim failed: {r['error']}")
@@ -505,12 +534,16 @@ def apply_proposal(proposal: dict, path: Path, *, dry_run: bool) -> None:
 
 
 def main():
+    global MAXLAG
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("path", nargs="?")
     ap.add_argument("--slug")
     ap.add_argument("--apply", action="store_true",
                     help="Actually post to Wikidata. Default is dry-run.")
+    ap.add_argument("--maxlag", default=MAXLAG,
+                    help=f"maxlag seconds sent with each write (default {MAXLAG}).")
     args = ap.parse_args()
+    MAXLAG = args.maxlag
 
     if not args.path and not args.slug:
         ap.error("Specify a proposal path or --slug")

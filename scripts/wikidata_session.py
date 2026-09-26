@@ -12,6 +12,11 @@ the default user rate limit.
 Reads credentials from ../.env:
     WD_BOT_USERNAME=YourName@bot-label
     WD_BOT_PASSWORD=<generated>
+
+If no bot password is set, falls back to the Wikimedia OAuth 2 token
+WF_OAUTH_TOKEN (the same token the Wikifunctions tooling uses). An
+owner-only token registered for all projects authenticates on Wikidata
+too, as the owner's own account.
 """
 
 from __future__ import annotations
@@ -42,13 +47,16 @@ def _load_env():
 
 class WikidataSession:
     def __init__(self, username: str | None = None, password: str | None = None):
+        self._oauth_token = ""
         if username is None or password is None:
             env = _load_env()
             username = username or env.get("WD_BOT_USERNAME", "")
             password = password or env.get("WD_BOT_PASSWORD", "")
-        if not username or not password:
+            if not username or not password:
+                self._oauth_token = env.get("WF_OAUTH_TOKEN", "").strip('"')
+        if (not username or not password) and not self._oauth_token:
             raise RuntimeError(
-                "WD_BOT_USERNAME and WD_BOT_PASSWORD must be set in .env"
+                "Set WD_BOT_USERNAME and WD_BOT_PASSWORD (or WF_OAUTH_TOKEN) in .env"
             )
         self.username = username
         self.password = password
@@ -57,6 +65,9 @@ class WikidataSession:
             urllib.request.HTTPCookieProcessor(self._cookies)
         )
         self._opener.addheaders = [("User-Agent", USER_AGENT)]
+        if self._oauth_token:
+            self._opener.addheaders.append(
+                ("Authorization", f"Bearer {self._oauth_token}"))
         self._csrf: str | None = None
         self._logged_in = False
 
@@ -80,6 +91,12 @@ class WikidataSession:
 
     def _login(self) -> None:
         if self._logged_in:
+            return
+        if self._oauth_token:
+            r = self._call({"action": "query", "meta": "userinfo", "format": "json"})
+            if "anon" in r["query"]["userinfo"]:
+                raise RuntimeError("WF_OAUTH_TOKEN did not authenticate on Wikidata")
+            self._logged_in = True
             return
         r = self._call({"action": "query", "meta": "tokens",
                         "type": "login", "format": "json"})

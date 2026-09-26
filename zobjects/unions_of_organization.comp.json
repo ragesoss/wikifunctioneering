@@ -1,0 +1,61 @@
+{
+  "function_zid": "Z43460",
+  "implementation_zid": "Z43461",
+  "label": "current best P9239 values, composition",
+  "summary": "Add composition: map(value of statement, select best(filter(statement has no end time?, statements for P9239 of fetched organization)))",
+  "expect_args": [
+    "organization"
+  ],
+  "composition": {
+    "call": "Z873",
+    "name": "map function",
+    "args": {
+      "Z873K1": {
+        "label": "function",
+        "literal": "Z19308",
+        "type": "Z9"
+      },
+      "Z873K2": {
+        "label": "iterable",
+        "call": "Z29688",
+        "name": "select best Wikidata statements",
+        "args": {
+          "Z29688K1": {
+            "label": "statements",
+            "call": "Z872",
+            "name": "Filter Function",
+            "args": {
+              "Z872K1": {
+                "label": "function",
+                "literal": "Z43444",
+                "type": "Z9"
+              },
+              "Z872K2": {
+                "label": "iterable",
+                "call": "Z29691",
+                "name": "get statements for Wikidata property from item",
+                "args": {
+                  "Z29691K1": {
+                    "label": "item",
+                    "call": "Z6821",
+                    "name": "item from Wikidata reference",
+                    "args": {
+                      "Z6821K1": {
+                        "ref": "organization"
+                      }
+                    }
+                  },
+                  "Z29691K2": {
+                    "label": "property",
+                    "literal": "P9239",
+                    "type": "Z6092"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

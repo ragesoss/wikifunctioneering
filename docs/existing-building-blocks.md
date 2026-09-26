@@ -145,6 +145,9 @@ python scripts/wikifunctions_search.py --search "term" --type Z8
 | Z28513 | filter statements by qualifiers | List of Z1, List of Property Refs → List of Statements | Keeps only statements that have qualifiers with specified properties; empty property list = keep all with any qualifier |
 | Z33103 | statement value is reference to item? | Statement (Z6003), Item Ref (Z6091) → Boolean | Checks if a statement's main value matches a given item reference. Key for filtering claims by value with Z28316. |
 | Z29691 | get statements for property from item | Item, Property Ref → List of Statements | Returns all statements for a property (not just highest rank) |
+| Z29688 | select best Wikidata statements | List of Statements → List of Statements | All preferred, else all normal, else empty — i.e. best-rank selection that also drops deprecated |
+| Z42503 | values of property from Wikidata item reference | Item Ref, Property Ref, best only? (Boolean) → List of Z1 | One-call "all values of P on item"; fetches only that property (via Z30120). Loses qualifiers — if you need to filter on them, build from Z29691/Z29688 instead |
+| Z43444 | Wikidata statement has no end time? | Statement (Z6003) → Boolean | `Z813(Z28312(statement, P582))`. Single-arg predicate for Z872 to keep only current statements |
 
 ## Wikidata — Items
 
@@ -241,6 +244,12 @@ Helpers built on these (created 2026-09-11; specs in `zobjects/`, design in
 | Z41827 | lexeme reference has sense with name type? | lexeme reference: Z6095, name type: Z6091 → Boolean | `not(is empty(Z28316(Z41819, senses of fetched lexeme, type)))`; reference-level predicate for Z28316 |
 | Z41831 | word for concept with name type | concept: Z6091, language: Z60, name type: Z6091 → String | First lemma of the first Z6830(concept, P5137, language) hit passing Z41827. "The solfège syllable for the dominant", not "dominant" |
 | Z41820 | item from item, property, and object role | item: Z6091, property: Z6092, object role: Z6091 → Z6091 | `Z19308(Z23680(Z31659(Z6821(item), property, P3831, role)))`; picks the P460 value with the given role qualifier. Generalises Z31108 |
+
+## Organizations / labor (user-created)
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z43460 | unions representing workers of organization | organization: Z6091 → List of Z6091 | `Z873(Z19308, Z29688(Z872(Z43444, Z29691(Z6821(org), P9239))))`. P9239 "affiliated worker organisation" lives on the employer; ended (P582) statements excluded before best-rank selection |
 
 ## Lexemes / Wikidata-grounded text (user-created)
 

@@ -1,0 +1,31 @@
+{
+  "function_zid": "Z43444",
+  "implementation_zid": "Z43445",
+  "label": "no P582 qualifiers, composition",
+  "summary": "Add composition: is empty list(qualifiers of statement with predicate P582)",
+  "expect_args": [
+    "statement"
+  ],
+  "composition": {
+    "call": "Z813",
+    "name": "Is empty list",
+    "args": {
+      "Z813K1": {
+        "label": "list",
+        "call": "Z28312",
+        "name": "qualifiers of Wikidata statement with predicate",
+        "args": {
+          "Z28312K1": {
+            "label": "statement",
+            "ref": "statement"
+          },
+          "Z28312K2": {
+            "label": "predicate to match",
+            "literal": "P582",
+            "type": "Z6092"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "task": "tester",
+  "function_zid": "Z43460",
+  "label": "ended union only (Q5849835) -> empty",
+  "test_call": {
+    "call": "Z43460",
+    "args": {"Z43460K1": {"literal": "Q5849835", "type": "Z6091"}}
+  },
+  "validator": {
+    "call": "Z889", "name": "List equality",
+    "args": {
+      "Z889K2": {"list": [], "type": "Z6091"},
+      "Z889K3": {"literal": "Z19316", "type": "Z9"}
+    }
+  }
+}

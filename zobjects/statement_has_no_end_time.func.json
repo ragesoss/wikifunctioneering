@@ -1,0 +1,10 @@
+{
+  "task": "function",
+  "label": "Wikidata statement has no end time?",
+  "description": "True if the statement has no 'end time' (P582) qualifier, i.e. it is not marked as having ended. Useful as a filter predicate to keep only current statements.",
+  "inputs": [
+    {"label": "statement", "type": "Z6003"}
+  ],
+  "output_type": "Z40",
+  "summary": "New function: Wikidata statement has no end time?"
+}

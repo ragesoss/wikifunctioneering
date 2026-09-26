@@ -1,0 +1,16 @@
+{
+  "task": "tester",
+  "function_zid": "Z43444",
+  "label": "Boston Public Library P9239 statement -> true",
+  "test_call": {
+    "call": "Z43444",
+    "args": {
+      "Z43444K1": {"call": "Z23451", "name": "Wikidata statement with highest rank",
+        "args": {
+          "Z23451K1": {"call": "Z6821", "args": {"Z6821K1": {"literal": "Q894583", "type": "Z6091"}}},
+          "Z23451K2": {"literal": "P9239", "type": "Z6092"}
+        }}
+    }
+  },
+  "validator": {"call": "Z844", "name": "Boolean equality", "args": {"Z844K2": {"literal": "Z41", "type": "Z40"}}}
+}

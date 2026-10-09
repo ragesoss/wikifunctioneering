@@ -272,8 +272,17 @@ def fetch_and_write(zids, wanted_types, batch_size, index, dry_run=False):
         try:
             objs = fetch_batch(chunk)
         except Exception as e:
-            print(f"  WARN: fetch failed for {chunk[0]}..{chunk[-1]}: {e}", file=sys.stderr)
-            continue
+            # One missing ZID (e.g. a page deleted since it was edited) fails
+            # the whole batch with a 404, so retry the batch one ZID at a time
+            # and skip only the ones that fail on their own.
+            print(f"  WARN: batch fetch failed for {chunk[0]}..{chunk[-1]} ({e}); "
+                  f"retrying {len(chunk)} individually", file=sys.stderr)
+            objs = {}
+            for zid in chunk:
+                try:
+                    objs.update(fetch_batch([zid]))
+                except Exception as e1:
+                    print(f"    skip {zid}: {e1}", file=sys.stderr)
 
         for zid, zobj in objs.items():
             ztype = inner_type(zobj)

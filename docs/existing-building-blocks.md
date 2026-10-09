@@ -207,6 +207,20 @@ When claim values and qualifier values come back as Z1 (generic), these function
 | Z33606 | MIDI number of reference note | pitch standard: Z6001 → Integer | Helper: MIDI of a pitch standard's reference note |
 | Z33682 | frequency of MIDI note number | midi note number: Integer, pitch standard: Z6001 → Float64 | Same formula as Z33605, with MIDI provided directly instead of pitch-class + octave |
 
+## Copyright / public domain (user-created)
+
+| ZID | Name | Signature | Notes |
+|-----|------|-----------|-------|
+| Z44736 | public domain in US by publication date | work: Z6091, reference year: Z20159 → Boolean | `and(Z20219(Z28777(work, P577), year) >= 96, Z20257(Z28777(work, P577)) < 1978)`. Best-ranked P577 only; errors on no P577 or decade/century precision. False = "this rule doesn't establish PD". Impl Z44737, testers Z44738–Z44743 |
+
+Related built-ins: Z28777 "year from item and property" (best-ranked
+time value → Gregorian year), Z20219 "difference between Gregorian
+years", Z20257 "Gregorian year to ISO 8601 year integer", Z20198
+"String as Gregorian Year" (use it to build year literals in tester
+specs; the emitter has no Z20159 literal), Z23833 "current date" +
+Z24948 "year from calendar date" → the current year (cached, so not
+for testers).
+
 ## Wikidata — Lexeme search and sense selection
 
 Z6830 is not just "item → lexemes via P5137": it runs CirrusSearch

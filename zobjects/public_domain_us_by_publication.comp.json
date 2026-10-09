@@ -1,27 +1,89 @@
 {
-  "function_zid": "TBD",
-  "label": "published 96+ years before the reference year",
-  "summary": "Add composition: difference between Gregorian years(year from item and property(work, P577), reference year) >= 96",
-  "expect_args": ["work", "reference year"],
+  "function_zid": "Z44736",
+  "label": "P577 year: before 1978 and 96+ years earlier",
+  "summary": "Add composition: and(difference between Gregorian years(year from item and property(work, P577), reference year) >= 96, ISO year(year from item and property(work, P577)) < 1978)",
+  "expect_args": [
+    "work",
+    "reference year"
+  ],
   "composition": {
-    "call": "Z17173", "name": "greater than or equal (integer)",
+    "call": "Z10174",
+    "name": "and",
     "args": {
-      "Z17173K1": {
-        "label": "first integer",
-        "call": "Z20219", "name": "difference between Gregorian years",
+      "Z10174K1": {
+        "label": "first value: 95-year term has run out",
+        "call": "Z17173",
+        "name": "greater than or equal (integer)",
         "args": {
-          "Z20219K1": {
-            "label": "earlier year",
-            "call": "Z28777", "name": "year from item and property",
+          "Z17173K1": {
+            "label": "first integer",
+            "call": "Z20219",
+            "name": "difference between Gregorian years",
             "args": {
-              "Z28777K1": {"label": "item", "ref": "work"},
-              "Z28777K2": {"label": "property (P577 publication date)", "literal": "P577", "type": "Z6092"}
+              "Z20219K1": {
+                "label": "earlier year",
+                "call": "Z28777",
+                "name": "year from item and property",
+                "args": {
+                  "Z28777K1": {
+                    "label": "item",
+                    "ref": "work"
+                  },
+                  "Z28777K2": {
+                    "label": "property (P577 publication date)",
+                    "literal": "P577",
+                    "type": "Z6092"
+                  }
+                }
+              },
+              "Z20219K2": {
+                "label": "later year",
+                "ref": "reference year"
+              }
             }
           },
-          "Z20219K2": {"label": "later year", "ref": "reference year"}
+          "Z17173K2": {
+            "label": "second integer (95-year term + 1)",
+            "literal": "96",
+            "type": "Z16683"
+          }
         }
       },
-      "Z17173K2": {"label": "second integer (95-year term + 1)", "literal": "96", "type": "Z16683"}
+      "Z10174K2": {
+        "label": "second value: published before 1978 (later works: life + 70)",
+        "call": "Z17140",
+        "name": "less than (integer)",
+        "args": {
+          "Z17140K1": {
+            "label": "first int",
+            "call": "Z20257",
+            "name": "Gregorian year to ISO 8601 year integer",
+            "args": {
+              "Z20257K1": {
+                "label": "year",
+                "call": "Z28777",
+                "name": "year from item and property",
+                "args": {
+                  "Z28777K1": {
+                    "label": "item",
+                    "ref": "work"
+                  },
+                  "Z28777K2": {
+                    "label": "property (P577 publication date)",
+                    "literal": "P577",
+                    "type": "Z6092"
+                  }
+                }
+              }
+            }
+          },
+          "Z17140K2": {
+            "label": "second int",
+            "literal": "1978",
+            "type": "Z16683"
+          }
+        }
+      }
     }
   }
 }

@@ -1,0 +1,35 @@
+{
+  "task": "tester",
+  "function_zid": "Z44736",
+  "label": "White Christmas (1942) in 2037 -> false",
+  "summary": "Test: White Christmas (1942) in 2037 -> false",
+  "test_call": {
+    "call": "Z44736",
+    "args": {
+      "Z44736K1": {
+        "literal": "Q1131761",
+        "type": "Z6091"
+      },
+      "Z44736K2": {
+        "call": "Z20198",
+        "name": "String as Gregorian Year",
+        "args": {
+          "Z20198K1": {
+            "literal": "2037",
+            "type": "Z6"
+          }
+        }
+      }
+    }
+  },
+  "validator": {
+    "call": "Z844",
+    "name": "Boolean equality",
+    "args": {
+      "Z844K2": {
+        "literal": "Z42",
+        "type": "Z40"
+      }
+    }
+  }
+}

@@ -76,3 +76,33 @@ Platform-level primitive needed to rewrite string→lexeme lookups (like Z29517)
 3. Walk its senses to find the one whose `P5137` points to the scale-degree item → return that sense's ID. (Step 3 may want its own small helper, "sense of lexeme matching P5137 target", but that's pure composition over existing sense-list primitives.)
 
 **Benefit:** all solfege variants (sol/so, ti/si, do/ut, etc.) resolve automatically after a Wikidata sense addition on the relevant lexeme — no Wikifunctions code edit required.
+
+## Public domain family (follow-ups to Z44736)
+
+Planned 2026-10-09 alongside Z44736 "public domain in US by publication date".
+
+- **public domain by life + 70** — work: Z6091, reference year: Z20159 →
+  Boolean. Collect P86 + P676 statements (Z29691, Z18755), keep creators
+  who did *not* die ≥ 71 years before the reference year (new helper:
+  person ref + year → Boolean, false when there is no P570), and require
+  that list to be empty **and** the creator list non-empty (else a work
+  with no creators is vacuously PD). Watch for `somevalue` creators
+  (Happy Birthday's lyricist is "unknown value" with P3831 = anonymous).
+  Expected: Take Me Out to the Ball Game false until 2030, Happy Birthday
+  true (matches its P3893 = 2017-01-01 for pma-70 countries), Yesterday
+  false (living creator).
+- **earliest publication year** — work → Gregorian year, from the minimum
+  over all non-deprecated P577 statements. Z28777 takes the first
+  best-ranked value; 156 songs have 2+ non-deprecated P577s with
+  different years. Needs a "minimum of list of years" (only
+  natural-number max exists: Z29429).
+- **current Gregorian year** — `Z24948(Z23833())`; plus "…as of this
+  year" wrappers. Not for testers (result is clock- and cache-dependent).
+- **layered public-domain check** (work, jurisdiction, year): explicit
+  P3893 public domain date for the jurisdiction → explicit P6216
+  copyright status (non-deprecated, P1001 jurisdiction, P580 start) →
+  computed rule (Z44736 for the US, life + 70 for Q59542795 "countries
+  with 70 years pma or shorter"). Needs jurisdiction → group membership.
+  A separate checker should flag disagreement between explicit statements
+  and the computed rule — e.g. the 65 songs with P6216 = public domain,
+  P459 = Q47246828 "published more than 95 years ago".

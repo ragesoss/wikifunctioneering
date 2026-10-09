@@ -1,0 +1,17 @@
+{
+  "task": "function",
+  "label": "public domain in US by publication date",
+  "description": "True if the work's best-ranked publication date (P577) is before 1978 and at least 96 years before the reference year, so its US term (max. 95 years from publication for pre-1978 works) has expired. False only means this rule does not establish public domain: 1931-1977 works may be public domain for lack of notice or renewal, and later works usually last for life + 70 years. A pre-1978 record release was not legal publication of the song.",
+  "inputs": [
+    {
+      "label": "work",
+      "type": "Z6091"
+    },
+    {
+      "label": "reference year",
+      "type": "Z20159"
+    }
+  ],
+  "output_type": "Z40",
+  "summary": "New function: public domain in US by publication date"
+}

@@ -1,0 +1,27 @@
+{
+  "function_zid": "TBD",
+  "label": "published 96+ years before the reference year",
+  "summary": "Add composition: difference between Gregorian years(year from item and property(work, P577), reference year) >= 96",
+  "expect_args": ["work", "reference year"],
+  "composition": {
+    "call": "Z17173", "name": "greater than or equal (integer)",
+    "args": {
+      "Z17173K1": {
+        "label": "first integer",
+        "call": "Z20219", "name": "difference between Gregorian years",
+        "args": {
+          "Z20219K1": {
+            "label": "earlier year",
+            "call": "Z28777", "name": "year from item and property",
+            "args": {
+              "Z28777K1": {"label": "item", "ref": "work"},
+              "Z28777K2": {"label": "property (P577 publication date)", "literal": "P577", "type": "Z6092"}
+            }
+          },
+          "Z20219K2": {"label": "later year", "ref": "reference year"}
+        }
+      },
+      "Z17173K2": {"label": "second integer (95-year term + 1)", "literal": "96", "type": "Z16683"}
+    }
+  }
+}

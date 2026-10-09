@@ -255,7 +255,10 @@ support placeholders resolved from earlier ops.
 
 For string and external-identifier properties (e.g. P2908
 SecondHandSongs work ID), add `"value_type": "string"` and the value
-is posted verbatim instead of as an item reference.
+is posted verbatim instead of as an item reference. Other value types,
+qualifiers, and references: see "Value types, qualifiers, references"
+below. An `add_claim` that carries qualifiers or references posts the
+whole statement in one edit via `wbsetclaim`.
 
 ### `add_qualifier`
 
@@ -278,7 +281,59 @@ the apply step re-reads the statement and refuses if its property or main
 value differ from `statement_property` / `statement_value`, or if the
 qualifier is already present — so a GUID copied wrongly cannot land a
 qualifier on the wrong claim. `entity` is informational (for the diff).
-Placeholders are not supported in this op.
+
+The `value` may be a `{PLACEHOLDER}` from an earlier op — e.g. create
+an item in op 1, then point a deprecated statement at it with P8327
+"intended subject of deprecated statement" in op 2. Non-item qualifier
+values take `value_type` (and `precision` / `language`) like any snak.
+When the statement being qualified isn't item-valued, give
+`statement_value_type` (and `statement_precision` for times):
+
+```json
+{ "op": "add_qualifier", "entity": "Q167545",
+  "claim": "Q167545$af3238c3-4976-32e2-a190-b6b9df1684e7",
+  "statement_property": "P577", "statement_value": "1935",
+  "statement_value_type": "time", "statement_precision": "year",
+  "property": "P8327", "value": "{NEW_ARRANGEMENT}" }
+```
+
+### `add_reference`
+
+```json
+{ "op": "add_reference", "entity": "Q...", "claim": "<statement GUID>",
+  "statement_property": "Pxxx", "statement_value": "Q...",
+  "reference": [ { "property": "P248", "value": "Q..." } ] }
+```
+
+Adds one reference block to an existing statement via
+`wbsetreference`, with the same statement pre-check as `add_qualifier`.
+
+### Value types, qualifiers, references
+
+A value anywhere — a claim's main value, a qualifier, a reference snak —
+is a *snak spec*: `{"property", "value", "value_type"}` plus the extras
+its type needs. `value_type` defaults to `item`.
+
+| `value_type` | `value` | extras |
+|---|---|---|
+| `item` | Q-ID or `{PLACEHOLDER}` | |
+| `string` | string / external ID / URL, verbatim | |
+| `monolingualtext` | text | `language` (default `en`) |
+| `time` | `"1935"`, `"1935-12"`, `"1935-12-06"`, or `"+1935-00-00T00:00:00Z"` | `precision`: `year` / `month` / `day` (or 7–11; default `day`); Gregorian |
+
+Claims in `create_item` and `add_claim` may carry `qualifiers` (a list
+of snak specs) and `references` (a list of reference blocks, each a
+list of snak specs):
+
+```json
+{ "property": "P577", "value": "1935", "value_type": "time", "precision": "year",
+  "qualifiers": [ { "property": "P1001", "value": "Q30" } ],
+  "references": [ [ { "property": "P248", "value": "Q56114002" },
+                    { "property": "P304", "value": "12", "value_type": "string" } ] ] }
+```
+
+Not yet supported: changing a statement's rank, removing statements,
+and quantity / coordinate values.
 
 ## Probes
 

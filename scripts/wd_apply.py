@@ -14,7 +14,8 @@ Supported op kinds:
   - add_sense     wbladdsense on an existing lexeme (gloss-only; claims via add_claim)
   - add_claim     wbcreateclaim on any entity (Q, L, or L-Sn for senses);
                   wbsetclaim when the new statement carries qualifiers/references
-  - add_qualifier wbsetqualifier on an existing statement (by GUID)
+  - add_qualifier wbsetqualifier on an existing statement (by GUID); the
+                  value may be a {PLACEHOLDER} from an earlier op
   - add_reference wbsetreference on an existing statement (by GUID)
 
 Rate limiting: every write includes maxlag=5; we sleep 2 s between edits
@@ -121,16 +122,6 @@ def _entity_value(qid: str) -> dict:
     return {"entity-type": "item", "numeric-id": int(qid[1:]), "id": qid}
 
 
-def _claim_statement(pid: str, qid: str) -> dict:
-    return {
-        "mainsnak": {
-            "snaktype": "value", "property": pid,
-            "datavalue": {"value": _entity_value(qid), "type": "wikibase-entityid"},
-        },
-        "type": "statement", "rank": "normal",
-    }
-
-
 def build_create_item(op: dict, summary: str) -> dict:
     data: dict = {"labels": {}, "descriptions": {}, "aliases": {}, "claims": {}}
     for lg, v in (op.get("labels") or {}).items():
@@ -140,9 +131,7 @@ def build_create_item(op: dict, summary: str) -> dict:
     for lg, vs in (op.get("aliases") or {}).items():
         data["aliases"][lg] = [{"language": lg, "value": v} for v in vs]
     for cl in op.get("claims") or []:
-        data["claims"].setdefault(cl["property"], []).append(
-            _claim_statement(cl["property"], cl["value"])
-        )
+        data["claims"].setdefault(cl["property"], []).append(_statement(cl, cl["value"]))
     # Drop empty sub-dicts so we don't send noise.
     data = {k: v for k, v in data.items() if v}
     return {
@@ -153,26 +142,47 @@ def build_create_item(op: dict, summary: str) -> dict:
     }
 
 
-def _raw_value(value: str, value_type: str = "item", language: str | None = None):
+_PRECISION = {"century": 7, "decade": 8, "year": 9, "month": 10, "day": 11}
+
+
+def _time_value(value: str, precision) -> dict:
+    """value: "1935", "1935-12", "1935-12-06", or a full "+1935-00-00T00:00:00Z";
+    precision: year / month / day (or the Wikibase integer). Gregorian."""
+    if not value.startswith(("+", "-")):
+        parts = (value.split("-") + ["00", "00"])[:3]
+        value = f"+{int(parts[0]):04d}-{int(parts[1]):02d}-{int(parts[2]):02d}T00:00:00Z"
+    if isinstance(precision, str):
+        precision = _PRECISION[precision]
+    return {"time": value, "timezone": 0, "before": 0, "after": 0,
+            "precision": precision,
+            "calendarmodel": "http://www.wikidata.org/entity/Q1985727"}
+
+
+def _raw_value(value: str, value_type: str = "item", language: str | None = None,
+               precision=None):
     """The `value` part of a datavalue.
     value_type: "item" (Q-ID), "string" (string / external-id / url),
-    "monolingualtext" (needs `language`)."""
+    "monolingualtext" (needs `language`), "time" (takes `precision`,
+    default "day")."""
     if value_type == "string":
         return value
     if value_type == "monolingualtext":
         return {"text": value, "language": language or "en"}
+    if value_type == "time":
+        return _time_value(value, precision or "day")
     return _entity_value(value)
 
 
 _DV_TYPE = {"item": "wikibase-entityid", "string": "string",
-            "monolingualtext": "monolingualtext"}
+            "monolingualtext": "monolingualtext", "time": "time"}
 
 
 def _snak(spec: dict) -> dict:
-    """spec: {"property", "value", optional "value_type", "language"}."""
+    """spec: {"property", "value", optional "value_type", "language", "precision"}."""
     vt = spec.get("value_type", "item")
     return {"snaktype": "value", "property": spec["property"],
-            "datavalue": {"value": _raw_value(spec["value"], vt, spec.get("language")),
+            "datavalue": {"value": _raw_value(spec["value"], vt, spec.get("language"),
+                                              spec.get("precision")),
                           "type": _DV_TYPE[vt]}}
 
 
@@ -183,20 +193,39 @@ def _snak_map(specs: list[dict]) -> dict:
     return out
 
 
+def _value_matches(api_value, value: str, value_type: str = "item", precision=None) -> bool:
+    """Does a datavalue `value` read back from the API equal this spec value?"""
+    if value_type == "string":
+        return api_value == value
+    if value_type == "monolingualtext":
+        return (api_value or {}).get("text") == value
+    if value_type == "time":
+        want = _time_value(value, precision or "day")
+        return ((api_value or {}).get("time") == want["time"]
+                and api_value.get("precision") == want["precision"])
+    return (api_value or {}).get("id") == value
+
+
+def _statement(spec: dict, value: str) -> dict:
+    """Statement JSON for a claim spec ({"property", "value", optional
+    "value_type"/"language"/"precision", "qualifiers": [snak specs],
+    "references": [[snak specs], ...]}), with `value` already resolved."""
+    st = {"type": "statement", "rank": "normal",
+          "mainsnak": _snak({**spec, "value": value})}
+    if spec.get("qualifiers"):
+        st["qualifiers"] = _snak_map(spec["qualifiers"])
+    if spec.get("references"):
+        st["references"] = [{"snaks": _snak_map(block)} for block in spec["references"]]
+    return st
+
+
 def build_add_claim(entity: str, op: dict, value: str, summary: str) -> dict:
     """wbcreateclaim for a bare statement; wbsetclaim (one edit) when the
     op also carries `qualifiers` and/or `references` (lists of snak specs;
     `references` is a list of reference blocks, each a list of snak specs)."""
     vt = op.get("value_type", "item")
     if op.get("qualifiers") or op.get("references"):
-        claim = {
-            "id": f"{entity}${uuid.uuid4()}", "type": "statement", "rank": "normal",
-            "mainsnak": _snak({**op, "value": value}),
-        }
-        if op.get("qualifiers"):
-            claim["qualifiers"] = _snak_map(op["qualifiers"])
-        if op.get("references"):
-            claim["references"] = [{"snaks": _snak_map(block)} for block in op["references"]]
+        claim = {"id": f"{entity}${uuid.uuid4()}", **_statement(op, value)}
         return {
             "params": {"action": "wbsetclaim", "summary": summary, "bot": "0",
                        "format": "json", "maxlag": "5"},
@@ -207,7 +236,8 @@ def build_add_claim(entity: str, op: dict, value: str, summary: str) -> dict:
                    "property": op["property"], "snaktype": "value",
                    "summary": summary, "bot": "0",
                    "format": "json", "maxlag": "5"},
-        "post": {"value": json.dumps(_raw_value(value, vt, op.get("language")),
+        "post": {"value": json.dumps(_raw_value(value, vt, op.get("language"),
+                                                op.get("precision")),
                                      ensure_ascii=False)},
     }
 
@@ -220,37 +250,41 @@ def build_add_reference(claim_guid: str, block: list[dict], summary: str) -> dic
     }
 
 
-def build_add_qualifier(claim_guid: str, pid: str, qid: str, summary: str) -> dict:
-    """wbsetqualifier: add an item-valued qualifier to an existing statement,
-    addressed by its GUID (e.g. Q12416644$dbf00af7-...)."""
+def build_add_qualifier(claim_guid: str, op: dict, value: str, summary: str) -> dict:
+    """wbsetqualifier: add a qualifier to an existing statement, addressed by
+    its GUID (e.g. Q12416644$dbf00af7-...). The qualifier value follows the
+    op's `value_type` (default item) with `value` already resolved."""
     return {
         "params": {"action": "wbsetqualifier", "claim": claim_guid,
-                   "property": pid, "snaktype": "value",
+                   "property": op["property"], "snaktype": "value",
                    "summary": summary, "bot": "0",
                    "format": "json", "maxlag": "5"},
-        "post": {"value": json.dumps(_entity_value(qid), ensure_ascii=False)},
+        "post": {"value": json.dumps(_raw_value(value, op.get("value_type", "item"),
+                                                op.get("language"), op.get("precision")),
+                                     ensure_ascii=False)},
     }
 
 
-def claim_exists(entity: str, pid: str, value: str, value_type: str) -> bool:
+def claim_exists(entity: str, pid: str, value: str, value_type: str,
+                 precision=None) -> bool:
     """True if `entity` already has a `pid` statement with this main value,
     so reruns after a partial apply don't create duplicate statements."""
     from wd_common import wbgetentities
     claims = wbgetentities([entity], props="claims").get(entity, {}).get("claims", {})
-    for c in claims.get(pid, []):
-        v = c["mainsnak"].get("datavalue", {}).get("value")
-        got = v if value_type == "string" else (v or {}).get(
-            "text" if value_type == "monolingualtext" else "id")
-        if got == value:
-            return True
-    return False
+    return any(_value_matches(c["mainsnak"].get("datavalue", {}).get("value"),
+                              value, value_type, precision)
+               for c in claims.get(pid, []))
 
 
-def check_qualifier_target(op: dict, check_qualifier: bool = True) -> str | None:
+def check_qualifier_target(op: dict, check_qualifier: bool = True,
+                           value: str | None = None) -> str | None:
     """Re-read the statement behind `op['claim']` and confirm it is the one
     the proposal thinks it is (right property and main value) and, when
-    `check_qualifier`, does not already carry the qualifier. Returns None
-    when fine, else a message. Also used as the add_reference pre-check."""
+    `check_qualifier`, does not already carry the qualifier `value` (the
+    op's value with placeholders resolved). Returns None when fine, else a
+    message. Also used as the add_reference pre-check. A statement whose
+    main value isn't an item is matched with `statement_value_type` (and
+    `statement_precision` for times)."""
     import urllib.parse
     from wd_common import _http_get_json
     from config import WIKIDATA_API
@@ -261,16 +295,20 @@ def check_qualifier_target(op: dict, check_qualifier: bool = True) -> str | None
         return f"statement {op['claim']} not found"
     c = claims[0]
     prop = c["mainsnak"].get("property")
-    val = (c["mainsnak"].get("datavalue", {}).get("value", {}) or {}).get("id")
+    val = c["mainsnak"].get("datavalue", {}).get("value")
     if op.get("statement_property") and prop != op["statement_property"]:
         return f"statement is {prop}, expected {op['statement_property']}"
-    if op.get("statement_value") and val != op["statement_value"]:
-        return f"statement value is {val}, expected {op['statement_value']}"
-    if not check_qualifier:
-        return None
+    if op.get("statement_value") and not _value_matches(
+            val, op["statement_value"], op.get("statement_value_type", "item"),
+            op.get("statement_precision")):
+        return f"statement value is {json.dumps(val)}, expected {op['statement_value']}"
+    value = op.get("value") if value is None else value
+    if not check_qualifier or _PLACEHOLDER_RE.search(value):
+        return None  # an unresolved placeholder (dry run) can't be present yet
     for q in c.get("qualifiers", {}).get(op["property"], []):
-        if (q.get("datavalue", {}).get("value", {}) or {}).get("id") == op["value"]:
-            return f"qualifier {op['property']}={op['value']} already present"
+        if _value_matches(q.get("datavalue", {}).get("value"), value,
+                          op.get("value_type", "item"), op.get("precision")):
+            return f"qualifier {op['property']}={value} already present"
     return None
 
 
@@ -331,8 +369,12 @@ def _gather_ref_ids(proposal: dict) -> set[str]:
             for cl in op.get("claims", []):
                 ids.add(cl["property"])
                 v = cl["value"]
-                if v and v[0] in "QLP":
+                if cl.get("value_type", "item") == "item" and v and v[0] in "QLP":
                     ids.add(v)
+                for sp in cl.get("qualifiers", []) + [s for b in cl.get("references", []) for s in b]:
+                    ids.add(sp["property"])
+                    if sp.get("value_type", "item") == "item":
+                        ids.add(sp["value"])
         elif op["op"] == "add_sense":
             ids.add(op["lexeme"])
         elif op["op"] == "add_claim":
@@ -377,10 +419,19 @@ def _fmt_q_or_placeholder(val: str, ents: dict) -> str:
     return val
 
 
+def _fmt_value(sp: dict, ents: dict) -> str:
+    vt = sp.get("value_type", "item")
+    if vt == "item":
+        return _fmt_q_or_placeholder(sp["value"], ents)
+    if vt == "time":
+        return f"{sp['value']} (precision: {sp.get('precision', 'day')})"
+    if vt == "monolingualtext":
+        return f"\u201c{sp['value']}\u201d ({sp.get('language', 'en')})"
+    return f"\u201c{sp['value']}\u201d"
+
+
 def _fmt_snak(sp: dict, ents: dict) -> str:
-    val = (_fmt_q_or_placeholder(sp["value"], ents) if sp.get("value_type", "item") == "item"
-           else f"\u201c{sp['value']}\u201d")
-    return f"{_fmt_q_or_placeholder(sp['property'], ents)} = {val}"
+    return f"{_fmt_q_or_placeholder(sp['property'], ents)} = {_fmt_value(sp, ents)}"
 
 
 def render_semantic_diff(proposal: dict, ents: dict) -> list[str]:
@@ -404,8 +455,11 @@ def render_semantic_diff(proposal: dict, ents: dict) -> list[str]:
                 out.append(f"  aliases ({lg}):       {', '.join(vs)}")
             for cl in op.get("claims", []):
                 pid = _fmt_q_or_placeholder(cl["property"], ents)
-                vid = _fmt_q_or_placeholder(cl["value"], ents)
-                out.append(f"  {pid}  \u2192  {vid}")
+                out.append(f"  {pid}  \u2192  {_fmt_value(cl, ents)}")
+                for sp in cl.get("qualifiers", []):
+                    out.append(f"      qualifier {_fmt_snak(sp, ents)}")
+                for block in cl.get("references", []):
+                    out.append(f"      reference: " + "; ".join(_fmt_snak(sp, ents) for sp in block))
 
         elif op["op"] == "add_sense":
             ph = op.get("placeholder_id") or "NEW_SENSE"
@@ -426,9 +480,7 @@ def render_semantic_diff(proposal: dict, ents: dict) -> list[str]:
         elif op["op"] == "add_claim":
             ent = op["entity"]
             pid = _fmt_q_or_placeholder(op["property"], ents)
-            val = (_fmt_q_or_placeholder(op["value"], ents)
-                   if op.get("value_type", "item") == "item" else f"\u201c{op['value']}\u201d"
-                   + (f" ({op.get('language', 'en')})" if op.get("value_type") == "monolingualtext" else ""))
+            val = _fmt_value(op, ents)
             ent_r = _fmt_q_or_placeholder(ent, ents)
             out.append(f"Change {i} \u2014 ADD statement")
             out.append(f"  {ent_r}")
@@ -445,7 +497,7 @@ def render_semantic_diff(proposal: dict, ents: dict) -> list[str]:
                        f"  \u2192  {_fmt_q_or_placeholder(op.get('statement_value', '?'), ents)}"
                        f"   [{op['claim']}]")
             out.append(f"      + {_fmt_q_or_placeholder(op['property'], ents)}"
-                       f"  \u2192  {_fmt_q_or_placeholder(op['value'], ents)}")
+                       f"  \u2192  {_fmt_value(op, ents)}")
 
         elif op["op"] == "add_reference":
             out.append(f"Change {i} \u2014 ADD reference")
@@ -584,7 +636,8 @@ def apply_proposal(proposal: dict, path: Path, *, dry_run: bool) -> None:
                 req = build_add_claim(resolved_entity, op, resolved_value, summary)
                 print_request(req, prefix="    ")
                 if not dry_run and claim_exists(resolved_entity, op["property"],
-                                                resolved_value, value_type):
+                                                resolved_value, value_type,
+                                                op.get("precision")):
                     print(f"    = already present on {resolved_entity}; skipping")
                     op_results.append({"op": "add_claim", "entity": resolved_entity,
                                        "property": op["property"], "value": resolved_value,
@@ -600,21 +653,31 @@ def apply_proposal(proposal: dict, path: Path, *, dry_run: bool) -> None:
                     print(f"    \u2713 claim added: {claim_id}")
                     time.sleep(INTER_EDIT_SLEEP)
         elif op["op"] == "add_qualifier":
-            problem = check_qualifier_target(op)
+            # The value may name an item created earlier in this proposal.
+            unresolved = dry_run and bool(_PLACEHOLDER_RE.search(op["value"]))
+            value = op["value"] if unresolved else resolve_placeholders(op["value"], placeholder_env)
+            problem = check_qualifier_target(op, value=value)
             if problem:
                 raise RuntimeError(f"add_qualifier pre-check failed for {op['claim']}: {problem}")
             print(f"    pre-check ok: {op['claim']} is {op.get('statement_property')}={op.get('statement_value')}, "
                   f"qualifier not yet present")
-            summary = summary_add_qualifier(proposal, op)
-            req = build_add_qualifier(op["claim"], op["property"], op["value"], summary)
-            print_request(req, prefix="    ")
+            summary = summary_add_qualifier(proposal, {**op, "value": value})
+            if unresolved:
+                params = {"action": "wbsetqualifier", "claim": op["claim"],
+                          "property": op["property"], "snaktype": "value",
+                          "summary": summary, "bot": "0", "format": "json", "maxlag": "5"}
+                post = {"value": f"<{value}> (placeholder; resolved after earlier op)"}
+                print_request({"params": params, "post": post}, prefix="    ")
+            else:
+                req = build_add_qualifier(op["claim"], op, value, summary)
+                print_request(req, prefix="    ")
             if not dry_run:
                 r = post_with_maxlag_retry(session, req["params"], req["post"])
                 if "error" in r:
                     raise RuntimeError(f"add_qualifier failed: {r['error']}")
                 op_results.append({"op": "add_qualifier", "entity": op["entity"],
                                    "claim": op["claim"], "property": op["property"],
-                                   "value": op["value"]})
+                                   "value": value})
                 print(f"    \u2713 qualifier added on {op['claim']}")
                 time.sleep(INTER_EDIT_SLEEP)
         elif op["op"] == "add_reference":
